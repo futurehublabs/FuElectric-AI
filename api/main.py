@@ -5,7 +5,9 @@ from models.equipment import DiagnosisRequest
 from database.database import(
  create_tables,
 add_equipment,
-get_all_equipment
+get_all_equipment,
+get_equipment_by_id,
+update_equipment
 )
 from data import HOME_APPLIANCE_FAULTS
 
@@ -67,3 +69,37 @@ def diagnose(request: DiagnosisRequest):
         **diagnosis
     }
 
+@app.get("/equipment/{equipment_id}")
+def get_equipment(equipment_id: str):
+
+    equipment = get_equipment_by_id(equipment_id)
+
+    if not equipment:
+        raise HTTPException(
+            status_code=404,
+             detail="Equipment not found."
+             )
+
+    return equipment
+
+@app.put("/equipment/{equipment_id}")
+def update_equipment_endpoint (
+    equipment_id: str,
+    equipment: Equipment
+):
+
+    existing = get_equipment_by_id(equipment_id)
+
+    if existing is None:
+     raise HTTPException(
+        status_code=404,
+        detail="Equipment not found."
+    )
+
+    update_equipment(equipment_id, equipment)
+
+    return{
+
+     "message": "Equipment updated successfully.",
+     "equipment": equipment
+    }
