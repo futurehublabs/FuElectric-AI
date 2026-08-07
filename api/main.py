@@ -20,6 +20,7 @@ from database.database import (
     get_equipment_health,
     get_analytics,
     get_maintenance_alerts,
+    get_summary_report,
 
     add_maintenance,
     get_maintenance_history,
@@ -427,3 +428,12 @@ def analytics():
 def maintenance_alerts():
 
     return get_maintenance_alerts()
+
+# ==========================================================
+# REPORTS
+# ==========================================================
+
+@app.get("/reports/summary")
+def summary_report():
+
+    return get_summary_report()

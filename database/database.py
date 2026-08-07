@@ -896,3 +896,45 @@ def get_maintenance_alerts():
         "total_alerts": len(overdue),
         "alerts": [dict(row) for row in overdue]
     } 
+
+# ==========================================================
+# REPORTS
+# ==========================================================
+
+from datetime import datetime
+
+def get_summary_report():
+
+    conn = get_connection()
+
+    total_equipment = conn.execute(
+        "SELECT COUNT(*) FROM equipment"
+    ).fetchone()[0]
+
+    active_equipment = conn.execute(
+        "SELECT COUNT(*) FROM equipment WHERE status='Active'"
+    ).fetchone()[0]
+
+    maintenance_records = conn.execute(
+        "SELECT COUNT(*) FROM maintenance_history"
+    ).fetchone()[0]
+
+    technicians = conn.execute(
+        "SELECT COUNT(*) FROM technicians"
+    ).fetchone()[0]
+
+    repairs = conn.execute(
+        "SELECT COUNT(*) FROM repairs"
+    ).fetchone()[0]
+
+    conn.close()
+
+    return {
+        "report_name": "FuElectric-AI Summary Report",
+        "generated_on": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "total_equipment": total_equipment,
+        "active_equipment": active_equipment,
+        "maintenance_records": maintenance_records,
+        "repairs": repairs,
+        "technicians": technicians
+    }
