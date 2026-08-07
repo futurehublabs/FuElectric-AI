@@ -18,6 +18,7 @@ from database.database import (
     search_equipment,
     get_dashboard,
     get_equipment_health,
+    get_analytics,
 
     add_maintenance,
     get_maintenance_history,
@@ -408,3 +409,11 @@ def equipment_health(equipment_id: str):
 
     return health
 
+# ==========================================================
+# ANALYTICS
+# ==========================================================
+
+@app.get("/analytics")
+def analytics():
+
+    return get_analytics() 

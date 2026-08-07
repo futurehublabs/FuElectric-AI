@@ -797,3 +797,77 @@ def get_equipment_health(equipment_id: str):
         "maintenance_records": maintenance_count
     }
 
+# ==========================================================
+# ANALYTICS
+# ==========================================================
+
+def get_analytics():
+
+    conn = get_connection()
+
+    total_equipment = conn.execute(
+        "SELECT COUNT(*) FROM equipment"
+    ).fetchone()[0]
+
+    active_equipment = conn.execute(
+        "SELECT COUNT(*) FROM equipment WHERE status='Active'"
+    ).fetchone()[0]
+
+    total_maintenance = conn.execute(
+        "SELECT COUNT(*) FROM maintenance_history"
+    ).fetchone()[0]
+
+    total_repairs = conn.execute(
+        "SELECT COUNT(*) FROM repairs"
+    ).fetchone()[0]
+
+    pending_repairs = conn.execute(
+        "SELECT COUNT(*) FROM repairs WHERE repair_status='Pending'"
+    ).fetchone()[0]
+
+    completed_repairs = conn.execute(
+        "SELECT COUNT(*) FROM repairs WHERE repair_status='Completed'"
+    ).fetchone()[0]
+
+    total_technicians = conn.execute(
+        "SELECT COUNT(*) FROM technicians"
+    ).fetchone()[0]
+
+    equipment = conn.execute("""
+        SELECT equipment_id, COUNT(*) AS repairs
+        FROM repairs
+        GROUP BY equipment_id
+        ORDER BY repairs DESC
+        LIMIT 1
+    """).fetchone()
+
+    most_repaired_equipment = (
+        equipment["equipment_id"] if equipment else None
+    )
+
+    fault = conn.execute("""
+        SELECT fault_reported, COUNT(*) AS total
+        FROM repairs
+        GROUP BY fault_reported
+        ORDER BY total DESC
+        LIMIT 1
+    """).fetchone()
+
+    most_common_fault = (
+        fault["fault_reported"] if fault else None
+    )
+
+    conn.close()
+
+    return {
+        "total_equipment": total_equipment,
+        "active_equipment": active_equipment,
+        "total_maintenance": total_maintenance,
+        "total_repairs": total_repairs,
+        "pending_repairs": pending_repairs,
+        "completed_repairs": completed_repairs,
+        "total_technicians": total_technicians,
+        "most_repaired_equipment": most_repaired_equipment,
+        "most_common_fault": most_common_fault
+    } 
+
