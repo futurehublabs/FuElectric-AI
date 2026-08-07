@@ -19,6 +19,7 @@ from database.database import (
     get_dashboard,
     get_equipment_health,
     get_analytics,
+    get_maintenance_alerts,
 
     add_maintenance,
     get_maintenance_history,
@@ -417,3 +418,12 @@ def equipment_health(equipment_id: str):
 def analytics():
 
     return get_analytics() 
+
+# ==========================================================
+# MAINTENANCE ALERTS
+# ==========================================================
+
+@app.get("/maintenance/alerts")
+def maintenance_alerts():
+
+    return get_maintenance_alerts()

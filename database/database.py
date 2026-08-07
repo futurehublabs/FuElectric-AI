@@ -871,3 +871,28 @@ def get_analytics():
         "most_common_fault": most_common_fault
     } 
 
+# ==========================================================
+# MAINTENANCE ALERTS
+# ==========================================================
+
+def get_maintenance_alerts():
+
+    conn = get_connection()
+
+    overdue = conn.execute("""
+        SELECT
+            equipment_id,
+            name,
+            last_maintenance,
+            status
+        FROM equipment
+        WHERE last_maintenance IS NULL
+           OR last_maintenance = ''
+    """).fetchall()
+
+    conn.close()
+
+    return {
+        "total_alerts": len(overdue),
+        "alerts": [dict(row) for row in overdue]
+    } 
