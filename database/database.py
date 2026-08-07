@@ -39,8 +39,10 @@ def add_equipment(equipment):
     model,
     serial_number,
     location,
-    installation_date
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    installation_date,
+    status,
+    last_maintenance
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         equipment.equipment_id,
         equipment.name,
@@ -49,7 +51,9 @@ def add_equipment(equipment):
         equipment.model,
         equipment.serial_number,
         equipment.location,
-        equipment.installation_date
+        equipment.installation_date,
+        equipment.status,
+        equipment.last_maintenance
     ))
     
     conn.commit()
@@ -93,7 +97,9 @@ def update_equipment(equipment_id, equipment):
             model = ?,
             serial_number = ?,
             location = ?,
-            installation_date = ?
+            installation_date = ?,
+            status = ?,
+            last_maintenance = ?
         WHERE equipment_id = ?
         """, (
             equipment.name,
@@ -103,8 +109,48 @@ def update_equipment(equipment_id, equipment):
             equipment.serial_number,
             equipment.location,
             equipment.installation_date,
+            equipment.status,
+            equipment.last_maintenance,
             equipment_id
         ))
 
         conn.commit()
         conn.close()
+
+def delete_equipment(equipment_id):
+    conn = get_connection()
+
+    cursor = conn.execute(
+        "DELETE FROM equipment WHERE equipment_id = ?",
+        (equipment_id,)
+    )
+
+    conn.commit()
+    conn.close()
+
+    return cursor.rowcount > 0
+
+def search_equipment(keyword):
+    conn = get_connection()
+
+    cursor = conn.execute(
+        """
+        SELECT * FROM equipment
+        WHERE name LIKE ?
+        OR category LIKE ?
+        OR manufacturer LIKE ?
+        OR location LIKE ?
+        """,
+        (
+            f"%{keyword}%",
+            f"%{keyword}%",
+            f"%{keyword}%",
+            f"%{keyword}%"
+        )
+    )
+
+    equipment = cursor.fetchall()
+
+    conn.close()
+
+    return [dict(row) for row in equipment]
