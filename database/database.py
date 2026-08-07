@@ -684,3 +684,116 @@ def delete_repair(repair_id: str):
     conn.close()
 
     return deleted 
+
+# ==========================================================
+# DASHBOARD
+# ==========================================================
+
+def get_dashboard():
+
+    conn = get_connection()
+
+    total_equipment = conn.execute(
+        "SELECT COUNT(*) FROM equipment"
+    ).fetchone()[0]
+
+    active_equipment = conn.execute(
+        "SELECT COUNT(*) FROM equipment WHERE status = 'Active'"
+    ).fetchone()[0]
+
+    maintenance_records = conn.execute(
+        "SELECT COUNT(*) FROM maintenance_history"
+    ).fetchone()[0]
+
+    technicians = conn.execute(
+        "SELECT COUNT(*) FROM technicians"
+    ).fetchone()[0]
+
+    pending_repairs = conn.execute(
+        "SELECT COUNT(*) FROM repairs WHERE repair_status = 'Pending'"
+    ).fetchone()[0]
+
+    completed_repairs = conn.execute(
+        "SELECT COUNT(*) FROM repairs WHERE repair_status = 'Completed'"
+    ).fetchone()[0]
+
+    conn.close()
+
+    return {
+        "total_equipment": total_equipment,
+        "active_equipment": active_equipment,
+        "maintenance_records": maintenance_records,
+        "technicians": technicians,
+        "pending_repairs": pending_repairs,
+        "completed_repairs": completed_repairs
+    }
+
+# ==========================================================
+# EQUIPMENT HEALTH SCORE
+# ==========================================================
+
+def get_equipment_health(equipment_id: str):
+
+    conn = get_connection()
+
+    equipment = conn.execute(
+        """
+        SELECT *
+        FROM equipment
+        WHERE equipment_id = ?
+        """,
+        (equipment_id,)
+    ).fetchone()
+
+    if equipment is None:
+        conn.close()
+        return None
+
+    maintenance_count = conn.execute(
+        """
+        SELECT COUNT(*)
+        FROM maintenance_history
+        WHERE equipment_id = ?
+        """,
+        (equipment_id,)
+    ).fetchone()[0]
+
+    repair_count = conn.execute(
+        """
+        SELECT COUNT(*)
+        FROM repairs
+        WHERE equipment_id = ?
+        """,
+        (equipment_id,)
+    ).fetchone()[0]
+
+    score = 100
+
+    score -= repair_count * 10
+    score += maintenance_count * 2
+
+    if score > 100:
+        score = 100
+
+    if score < 0:
+        score = 0
+
+    if score >= 90:
+        status = "Excellent"
+    elif score >= 75:
+        status = "Good"
+    elif score >= 50:
+        status = "Fair"
+    else:
+        status = "Poor"
+
+    conn.close()
+
+    return {
+        "equipment_id": equipment_id,
+        "health_score": score,
+        "status": status,
+        "total_repairs": repair_count,
+        "maintenance_records": maintenance_count
+    }
+

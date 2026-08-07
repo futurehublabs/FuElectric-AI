@@ -16,6 +16,8 @@ from database.database import (
     update_equipment,
     delete_equipment,
     search_equipment,
+    get_dashboard,
+    get_equipment_health,
 
     add_maintenance,
     get_maintenance_history,
@@ -379,3 +381,30 @@ def repair_history(equipment_id: str):
         )
 
     return repairs
+
+# ==========================================================
+# DASHBOARD
+# ==========================================================
+
+@app.get("/dashboard")
+def dashboard():
+
+    return get_dashboard() 
+
+# ==========================================================
+# EQUIPMENT HEALTH SCORE
+# ==========================================================
+
+@app.get("/equipment/{equipment_id}/health")
+def equipment_health(equipment_id: str):
+
+    health = get_equipment_health(equipment_id)
+
+    if health is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Equipment not found."
+        )
+
+    return health
+
