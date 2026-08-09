@@ -351,6 +351,122 @@ async function loadEquipment() {
     }
 }
 
+// ==========================================================
+// EQUIPMENT HEALTH — v3.2
+// ==========================================================
+
+async function loadEquipmentHealth() {
+
+    try {
+
+        // Get registered equipment
+
+        const equipmentResponse = await fetch(
+            `${API_URL}/equipment`
+        );
+
+        if (!equipmentResponse.ok) {
+
+            throw new Error(
+                `Equipment request failed: ${equipmentResponse.status}`
+            );
+
+        }
+
+        const equipment =
+            await equipmentResponse.json();
+
+
+        // No equipment available
+
+        if (
+            !Array.isArray(equipment) ||
+            equipment.length === 0
+        ) {
+
+            console.log(
+                "No equipment available for health check."
+            );
+
+            return;
+        }
+
+
+        // Use the first equipment
+
+        const equipmentId =
+            equipment[0].equipment_id;
+
+
+        // Get health information
+
+        const healthResponse =
+            await fetch(
+                `${API_URL}/equipment/${equipmentId}/health`
+            );
+
+
+        if (!healthResponse.ok) {
+
+            throw new Error(
+                `Health request failed: ${healthResponse.status}`
+            );
+
+        }
+
+
+        const health =
+            await healthResponse.json();
+
+
+        console.log(
+            "Equipment health:",
+            health
+        );
+
+
+        // Health score
+
+        const healthElement =
+            document.getElementById(
+                "equipment-health"
+            );
+
+
+        if (healthElement) {
+
+            healthElement.textContent =
+                `${health.health_score}%`;
+
+        }
+
+
+        // Health status
+
+        const statusElement =
+            document.getElementById(
+                "equipment-health-status"
+            );
+
+
+        if (statusElement) {
+
+            statusElement.textContent =
+                `${health.status} — ${health.equipment_id}`;
+
+        }
+
+
+    } catch (error) {
+
+        console.error(
+            "Equipment health error:",
+            error
+        );
+
+    }
+
+}
 
 // ==========================================================
 // WORK ORDER MANAGEMENT
@@ -522,6 +638,8 @@ async function createWorkOrder() {
         await loadWorkOrders();
 
         await loadWorkOrderStatistics();
+
+        loadEquipmentHealth();
 
     }
 
@@ -842,6 +960,8 @@ window.addEventListener(
         loadWorkOrders();
 
         loadWorkOrderStatistics();
+
+        loadEquipmentHealth();
 
     }
 );

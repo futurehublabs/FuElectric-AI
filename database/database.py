@@ -907,50 +907,97 @@ def get_dashboard():
 # EQUIPMENT HEALTH SCORE
 # ==========================================================
 
-def get_equipment_health(
-    equipment_id: str
-):
+def get_equipment_health(equipment_id: str):
 
     conn = get_connection()
 
     try:
 
-        equipment = conn.execute("""
+        # ==================================================
+        # GET EQUIPMENT
+        # ==================================================
+
+        equipment = conn.execute(
+            """
             SELECT *
             FROM equipment
             WHERE equipment_id = ?
-        """, (equipment_id,)).fetchone()
+            """,
+            (equipment_id,)
+        ).fetchone()
 
         if equipment is None:
             return None
 
-        maintenance_count = conn.execute("""
+
+        # ==================================================
+        # COUNT MAINTENANCE RECORDS
+        # ==================================================
+
+        maintenance_count = conn.execute(
+            """
             SELECT COUNT(*)
             FROM maintenance_history
             WHERE equipment_id = ?
-        """, (equipment_id,)).fetchone()[0]
+            """,
+            (equipment_id,)
+        ).fetchone()[0]
 
-        repair_count = conn.execute("""
+
+        # ==================================================
+        # COUNT REPAIRS
+        # ==================================================
+
+        repair_count = conn.execute(
+            """
             SELECT COUNT(*)
             FROM repairs
             WHERE equipment_id = ?
-        """, (equipment_id,)).fetchone()[0]
+            """,
+            (equipment_id,)
+        ).fetchone()[0]
+
+
+        # ==================================================
+        # CALCULATE HEALTH SCORE
+        # ==================================================
 
         score = 100
 
+        # Repairs reduce equipment health
         score -= repair_count * 10
+
+        # Maintenance records improve equipment health
         score += maintenance_count * 2
 
+        # Keep score between 0 and 100
         score = max(0, min(100, score))
 
+
+        # ==================================================
+        # DETERMINE HEALTH STATUS
+        # ==================================================
+
         if score >= 90:
+
             status = "Excellent"
+
         elif score >= 75:
+
             status = "Good"
+
         elif score >= 50:
+
             status = "Fair"
+
         else:
+
             status = "Poor"
+
+
+        # ==================================================
+        # RETURN HEALTH INFORMATION
+        # ==================================================
 
         return {
             "equipment_id": equipment_id,
@@ -960,10 +1007,10 @@ def get_equipment_health(
             "maintenance_records": maintenance_count
         }
 
+
     finally:
 
         conn.close()
-
 
 # ==========================================================
 # ANALYTICS
