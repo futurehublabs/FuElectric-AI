@@ -1,5 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from datetime import datetime
 
 from models.equipment import Equipment
 from models.diagnosis import DiagnosisRequest
@@ -7,8 +9,17 @@ from models.maintenance import Maintenance
 from models.technician import Technician
 from models.repair import Repair
 from models.user import User
+from models.work_order import WorkOrder
+
 from security.password import hash_password, verify_password
 from security.generator import generate_strong_password
+from security.token import (
+    create_access_token,
+    get_current_user,
+    require_role,
+)
+
+from data import HOME_APPLIANCE_FAULTS
 
 from database.database import (
     create_tables,
@@ -24,10 +35,12 @@ from database.database import (
     # Maintenance
     add_maintenance,
     get_maintenance_history,
+    get_maintenance_alerts,
 
     # Technicians
     add_technician,
     get_all_technicians,
+    get_technician_by_id,
 
     # Repairs
     add_repair,
@@ -40,21 +53,31 @@ from database.database import (
     get_user_by_username,
     get_user_by_email,
 
-    # Dashboard & Analytics
+    # Work Orders
+    add_work_order,
+    get_all_work_orders,
+    get_work_order_by_id,
+    get_work_orders_by_equipment,
+    get_work_orders_by_technician,
+    update_work_order,
+    delete_work_order,
+    get_work_order_statistics,
+
+    # Dashboard
     get_dashboard,
     get_equipment_health,
     get_analytics,
-    get_maintenance_alerts,
     get_summary_report,
+    get_connection,
 )
 
-from security.token import (
-    create_access_token,
-    get_current_user,
-    require_role,
-)
 
-from data import HOME_APPLIANCE_FAULTS
+# ==========================================================
+# WORK ORDER STATUS MODEL
+# ==========================================================
+
+class WorkOrderStatusUpdate(BaseModel):
+    status: str
 
 
 # ==========================================================
@@ -70,8 +93,8 @@ create_tables()
 
 app = FastAPI(
     title="FuElectric-AI",
-    version="3.0",
-    description="AI Equipment Diagnosis API",
+    version="3.1",
+    description="AI Equipment Diagnosis & Maintenance API",
 )
 
 
@@ -88,7 +111,8 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-) 
+)
+
 
 # ==========================================================
 # HOME
@@ -97,7 +121,7 @@ app.add_middleware(
 @app.get("/")
 def home():
     return {
-        "message": "Welcome to FuElectric-AI 3.0"
+        "message": "Welcome to FuElectric-AI 3.1"
     }
 
 
@@ -151,7 +175,9 @@ def diagnose(request: DiagnosisRequest):
 @app.post("/equipment")
 def register_equipment(equipment: Equipment):
 
-    existing = get_equipment_by_id(equipment.equipment_id)
+    existing = get_equipment_by_id(
+        equipment.equipment_id
+    )
 
     if existing:
         raise HTTPException(
@@ -173,61 +199,6 @@ def list_equipment():
     return get_all_equipment()
 
 
-@app.get("/equipment/{equipment_id}")
-def get_equipment(equipment_id: str):
-
-    equipment = get_equipment_by_id(equipment_id)
-
-    if equipment is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Equipment not found."
-        )
-
-    return equipment
-
-
-@app.put("/equipment/{equipment_id}")
-def update_equipment_endpoint(
-    equipment_id: str,
-    equipment: Equipment
-):
-
-    existing = get_equipment_by_id(equipment_id)
-
-    if existing is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Equipment not found."
-        )
-
-    update_equipment(equipment_id, equipment)
-
-    return {
-        "message": "Equipment updated successfully.",
-        "equipment": equipment
-    }
-
-
-@app.delete("/equipment/{equipment_id}")
-def delete_equipment_endpoint(equipment_id: str):
-
-    existing = get_equipment_by_id(equipment_id)
-
-    if existing is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Equipment not found."
-        )
-
-    delete_equipment(equipment_id)
-
-    return {
-        "message": "Equipment deleted successfully.",
-        "equipment_id": equipment_id
-    }
-
-
 @app.get("/equipment/search/{keyword}")
 def search_equipment_endpoint(keyword: str):
 
@@ -245,6 +216,72 @@ def search_equipment_endpoint(keyword: str):
     }
 
 
+@app.get("/equipment/{equipment_id}")
+def get_equipment(equipment_id: str):
+
+    equipment = get_equipment_by_id(
+        equipment_id
+    )
+
+    if equipment is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Equipment not found."
+        )
+
+    return equipment
+
+
+@app.put("/equipment/{equipment_id}")
+def update_equipment_endpoint(
+    equipment_id: str,
+    equipment: Equipment
+):
+
+    existing = get_equipment_by_id(
+        equipment_id
+    )
+
+    if existing is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Equipment not found."
+        )
+
+    update_equipment(
+        equipment_id,
+        equipment
+    )
+
+    return {
+        "message": "Equipment updated successfully.",
+        "equipment": equipment
+    }
+
+
+@app.delete("/equipment/{equipment_id}")
+def delete_equipment_endpoint(
+    equipment_id: str
+):
+
+    existing = get_equipment_by_id(
+        equipment_id
+    )
+
+    if existing is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Equipment not found."
+        )
+
+    delete_equipment(equipment_id)
+
+    return {
+        "message": "Equipment deleted successfully.",
+        "equipment_id": equipment_id
+    }
+
+
 # ==========================================================
 # MAINTENANCE
 # ==========================================================
@@ -252,7 +289,9 @@ def search_equipment_endpoint(keyword: str):
 @app.post("/maintenance")
 def register_maintenance(record: Maintenance):
 
-    equipment = get_equipment_by_id(record.equipment_id)
+    equipment = get_equipment_by_id(
+        record.equipment_id
+    )
 
     if equipment is None:
         raise HTTPException(
@@ -267,15 +306,21 @@ def register_maintenance(record: Maintenance):
         "record": record
     }
 
+
 @app.get("/maintenance/alerts")
 def maintenance_alerts():
 
-    return get_maintenance_alerts() 
+    return get_maintenance_alerts()
+
 
 @app.get("/maintenance/{equipment_id}")
-def maintenance_history(equipment_id: str):
+def maintenance_history(
+    equipment_id: str
+):
 
-    history = get_maintenance_history(equipment_id)
+    history = get_maintenance_history(
+        equipment_id
+    )
 
     if not history:
         raise HTTPException(
@@ -291,7 +336,9 @@ def maintenance_history(equipment_id: str):
 # ==========================================================
 
 @app.post("/technician")
-def register_technician(technician: Technician):
+def register_technician(
+    technician: Technician
+):
 
     add_technician(technician)
 
@@ -314,7 +361,9 @@ def list_technicians():
 @app.post("/repair")
 def register_repair(repair: Repair):
 
-    equipment = get_equipment_by_id(repair.equipment_id)
+    equipment = get_equipment_by_id(
+        repair.equipment_id
+    )
 
     if equipment is None:
         raise HTTPException(
@@ -331,7 +380,9 @@ def register_repair(repair: Repair):
 
 
 @app.get("/repair/{equipment_id}")
-def repair_history(equipment_id: str):
+def repair_history(
+    equipment_id: str
+):
 
     repairs = get_repairs(equipment_id)
 
@@ -367,10 +418,13 @@ def get_user(user_id: str):
 
     return user
 
+
 @app.post("/users/signup")
 def signup(user: User):
 
-    existing_username = get_user_by_username(user.username)
+    existing_username = get_user_by_username(
+        user.username
+    )
 
     if existing_username:
         raise HTTPException(
@@ -378,7 +432,9 @@ def signup(user: User):
             detail="Username already exists."
         )
 
-    existing_email = get_user_by_email(str(user.email))
+    existing_email = get_user_by_email(
+        str(user.email)
+    )
 
     if existing_email:
         raise HTTPException(
@@ -386,7 +442,9 @@ def signup(user: User):
             detail="Email already exists."
         )
 
-    password_hash = hash_password(user.password)
+    password_hash = hash_password(
+        user.password
+    )
 
     add_user(
         user.user_id,
@@ -404,10 +462,13 @@ def signup(user: User):
         "role": user.role
     }
 
+
 @app.post("/users/login")
 def login(user: User):
 
-    existing_user = get_user_by_username(user.username)
+    existing_user = get_user_by_username(
+        user.username
+    )
 
     if existing_user is None:
         raise HTTPException(
@@ -444,18 +505,25 @@ def login(user: User):
         }
     }
 
+
 @app.get("/users/me")
-def get_my_profile(current_user=Depends(get_current_user)):
+def get_my_profile(
+    current_user=Depends(get_current_user)
+):
 
     return {
         "message": "Authentication successful.",
         "user": current_user
     }
 
+
 @app.get("/admin/dashboard")
 def admin_dashboard(
-    current_user=Depends(require_role(["Admin"]))
+    current_user=Depends(
+        require_role(["Admin"])
+    )
 ):
+
     return {
         "message": "Welcome to the Admin Dashboard.",
         "user": current_user
@@ -468,6 +536,7 @@ def technician_dashboard(
         require_role(["Admin", "Technician"])
     )
 ):
+
     return {
         "message": "Welcome to the Technician Dashboard.",
         "user": current_user
@@ -477,24 +546,31 @@ def technician_dashboard(
 @app.get("/viewer/dashboard")
 def viewer_dashboard(
     current_user=Depends(
-        require_role(["Admin", "Technician", "Viewer"])
+        require_role(
+            ["Admin", "Technician", "Viewer"]
+        )
     )
 ):
+
     return {
         "message": "Welcome to FuElectric-AI.",
         "user": current_user
     }
 
+
 @app.get("/users/generate-password")
 def generate_password(length: int = 16):
 
-    password = generate_strong_password(length)
+    password = generate_strong_password(
+        length
+    )
 
     return {
         "message": "Strong password generated successfully.",
         "password": password,
         "length": len(password)
     }
+
 
 # ==========================================================
 # DASHBOARD
@@ -507,13 +583,17 @@ def dashboard():
 
 
 # ==========================================================
-# EQUIPMENT HEALTH SCORE
+# EQUIPMENT HEALTH
 # ==========================================================
 
 @app.get("/equipment/{equipment_id}/health")
-def equipment_health(equipment_id: str):
+def equipment_health(
+    equipment_id: str
+):
 
-    health = get_equipment_health(equipment_id)
+    health = get_equipment_health(
+        equipment_id
+    )
 
     if health is None:
         raise HTTPException(
@@ -535,16 +615,6 @@ def analytics():
 
 
 # ==========================================================
-# MAINTENANCE ALERTS
-# ==========================================================
-
-@app.get("/maintenance/alerts")
-def maintenance_alerts():
-
-    return get_maintenance_alerts()
-
-
-# ==========================================================
 # SUMMARY REPORT
 # ==========================================================
 
@@ -552,3 +622,311 @@ def maintenance_alerts():
 def summary_report():
 
     return get_summary_report()
+
+
+# ==========================================================
+# WORK ORDERS — FuElectric-AI v3.1
+# ==========================================================
+
+@app.post("/work-orders")
+def register_work_order(
+    work_order: WorkOrder
+):
+
+    # Check equipment
+    equipment = get_equipment_by_id(
+        work_order.equipment_id
+    )
+
+    if equipment is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Equipment not found."
+        )
+
+    # Check technician
+    if work_order.technician_id:
+
+        technician = get_technician_by_id(
+            work_order.technician_id
+        )
+
+        if technician is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Technician not found."
+            )
+
+    # Creation time
+    if not work_order.created_at:
+
+        work_order.created_at = (
+            datetime.now().strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
+        )
+
+    add_work_order(work_order)
+
+    return {
+        "message": "Work order created successfully.",
+        "work_order": work_order
+    }
+
+
+@app.get("/work-orders")
+def list_work_orders():
+
+    return get_all_work_orders()
+
+
+@app.get("/work-orders/equipment/{equipment_id}")
+def equipment_work_orders(
+    equipment_id: str
+):
+
+    equipment = get_equipment_by_id(
+        equipment_id
+    )
+
+    if equipment is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Equipment not found."
+        )
+
+    return get_work_orders_by_equipment(
+        equipment_id
+    )
+
+
+@app.get("/work-orders/technician/{technician_id}")
+def technician_work_orders(
+    technician_id: str
+):
+
+    technician = get_technician_by_id(
+        technician_id
+    )
+
+    if technician is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Technician not found."
+        )
+
+    return get_work_orders_by_technician(
+        technician_id
+    )
+
+
+@app.get("/work-orders/statistics")
+def work_order_statistics():
+
+    return get_work_order_statistics()
+
+
+# ==========================================================
+# GET SINGLE WORK ORDER
+# ==========================================================
+
+@app.get("/work-orders/{work_order_id}")
+def get_work_order(
+    work_order_id: str
+):
+
+    work_order = get_work_order_by_id(
+        work_order_id
+    )
+
+    if work_order is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Work order not found."
+        )
+
+    return work_order
+
+
+# ==========================================================
+# UPDATE COMPLETE WORK ORDER
+# ==========================================================
+
+@app.put("/work-orders/{work_order_id}")
+def edit_work_order(
+    work_order_id: str,
+    work_order: WorkOrder
+):
+
+    existing = get_work_order_by_id(
+        work_order_id
+    )
+
+    if existing is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Work order not found."
+        )
+
+    update_work_order(
+        work_order_id,
+        work_order
+    )
+
+    return {
+        "message": "Work order updated successfully.",
+        "work_order_id": work_order_id
+    }
+
+
+# ==========================================================
+# UPDATE WORK ORDER STATUS — v3.1
+# ==========================================================
+
+@app.put(
+    "/work-orders/{work_order_id}/status"
+)
+def update_work_order_status(
+    work_order_id: str,
+    status_update: WorkOrderStatusUpdate
+):
+
+    allowed_statuses = [
+        "Open",
+        "In Progress",
+        "Completed",
+        "Cancelled"
+    ]
+
+    status = status_update.status
+
+    if status not in allowed_statuses:
+
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Invalid status. "
+                "Allowed statuses: "
+                + ", ".join(allowed_statuses)
+            )
+        )
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # Find work order
+    cursor.execute(
+        """
+        SELECT *
+        FROM work_orders
+        WHERE work_order_id = ?
+        """,
+        (work_order_id,)
+    )
+
+    work_order = cursor.fetchone()
+
+    if not work_order:
+
+        conn.close()
+
+        raise HTTPException(
+            status_code=404,
+            detail="Work Order not found."
+        )
+
+    # Update status
+    cursor.execute(
+        """
+        UPDATE work_orders
+        SET status = ?
+        WHERE work_order_id = ?
+        """,
+        (
+            status,
+            work_order_id
+        )
+    )
+
+    # Completion date
+    if status == "Completed":
+
+        completed_date = (
+            datetime.now().strftime(
+                "%Y-%m-%d"
+            )
+        )
+
+        cursor.execute(
+            """
+            UPDATE work_orders
+            SET completed_date = ?
+            WHERE work_order_id = ?
+            """,
+            (
+                completed_date,
+                work_order_id
+            )
+        )
+
+    else:
+
+        cursor.execute(
+            """
+            UPDATE work_orders
+            SET completed_date = NULL
+            WHERE work_order_id = ?
+            """,
+            (work_order_id,)
+        )
+
+    conn.commit()
+
+    # Get updated record
+    cursor.execute(
+        """
+        SELECT *
+        FROM work_orders
+        WHERE work_order_id = ?
+        """,
+        (work_order_id,)
+    )
+
+    updated_work_order = cursor.fetchone()
+
+    conn.close()
+
+    return {
+        "message": "Work Order status updated successfully.",
+        "work_order": dict(
+            updated_work_order
+        )
+    }
+
+
+# ==========================================================
+# DELETE WORK ORDER
+# ==========================================================
+
+@app.delete(
+    "/work-orders/{work_order_id}"
+)
+def remove_work_order(
+    work_order_id: str
+):
+
+    deleted = delete_work_order(
+        work_order_id
+    )
+
+    if not deleted:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Work order not found."
+        )
+
+    return {
+        "message": "Work order deleted successfully.",
+        "work_order_id": work_order_id
+    }

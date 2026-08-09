@@ -1,194 +1,500 @@
 <!DOCTYPE html>
+
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>FuElectric-AI</title>
+```
+<meta charset="UTF-8">
 
-    <link rel="stylesheet" href="style.css">
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
+
+<title>FuElectric-AI</title>
+
+<link
+    rel="stylesheet"
+    href="style.css"
+>
+```
+
 </head>
 
 <body>
 
-    <div class="app">
+<div class="app">
 
-        <header>
-            <h1>⚡ FuElectric-AI</h1>
-            <p>AI Equipment Diagnosis & Maintenance System</p>
-        </header>
+```
+<!-- ==================================================
+     HEADER
+     ================================================== -->
 
-        <main>
+<header>
 
-            <section class="welcome">
+    <h1>⚡ FuElectric-AI</h1>
 
-                <h2>Welcome to FuElectric-AI</h2>
+    <p>
+        AI Equipment Diagnosis & Maintenance System
+    </p>
 
-                <p>
-                    Monitor equipment, diagnose faults,
-                    track maintenance and analyze equipment health.
-                </p>
-
-            </section>
+</header>
 
 
-            <!-- LIVE DASHBOARD -->
-
-            <section class="dashboard">
-
-                <div class="card">
-                    <h3>⚙️ Total Equipment</h3>
-                    <p id="equipment-count">--</p>
-                </div>
-
-                <div class="card">
-                    <h3>🟢 Active Equipment</h3>
-                    <p id="active-equipment">--</p>
-                </div>
-
-                <div class="card">
-                    <h3>🔧 Maintenance Records</h3>
-                    <p id="maintenance-count">--</p>
-                </div>
-
-                <div class="card">
-                    <h3>👨‍🔧 Technicians</h3>
-                    <p id="technician-count">--</p>
-                </div>
-
-                <div class="card">
-                    <h3>🛠️ Pending Repairs</h3>
-                    <p id="pending-repairs">--</p>
-                </div>
-
-                <div class="card">
-                    <h3>✅ Completed Repairs</h3>
-                    <p id="completed-repairs">--</p>
-                </div>
-
-            </section>
+<main>
 
 
-            <!-- ACTIONS -->
+    <!-- ==================================================
+         WELCOME
+         ================================================== -->
 
-            <section class="actions">
+    <section class="welcome">
 
-                <button onclick="loadDashboard()">
-                    📊 Dashboard
-                </button>
+        <h2>
+            Welcome to FuElectric-AI
+        </h2>
 
-                <button onclick="showMessage('Equipment module coming next.')">
-                    ⚙️ Equipment
-                </button>
+        <p>
+            Monitor equipment, diagnose faults,
+            track maintenance and analyze equipment health.
+        </p>
 
-                <button onclick="showMessage('Diagnosis module coming next.')">
-                    🤖 Diagnosis
-                </button>
-
-                <button onclick="showMessage('Analytics module coming next.')">
-                    📈 Analytics
-                </button>
-
-            </section>
+    </section>
 
 
-            <!-- MESSAGE -->
+    <!-- ==================================================
+         MAIN DASHBOARD
+         ================================================== -->
 
-            <section id="message"></section>
+    <section class="dashboard">
 
-        </main>
+        <div class="card">
 
+            <h3>⚙️ Total Equipment</h3>
 
-        <footer>
-
-            <p>
-                FuElectric-AI v3.0.11
+            <p id="equipment-count">
+                --
             </p>
 
-        </footer>
-
-    </div>
+        </div>
 
 
-    <script src="app.js"></script>
+        <div class="card">
+
+            <h3>🟢 Active Equipment</h3>
+
+            <p id="active-equipment">
+                --
+            </p>
+
+        </div>
+
+
+        <div class="card">
+
+            <h3>🔧 Maintenance Records</h3>
+
+            <p id="maintenance-count">
+                --
+            </p>
+
+        </div>
+
+
+        <div class="card">
+
+            <h3>👨‍🔧 Technicians</h3>
+
+            <p id="technician-count">
+                --
+            </p>
+
+        </div>
+
+
+        <div class="card">
+
+            <h3>🛠️ Pending Repairs</h3>
+
+            <p id="pending-repairs">
+                --
+            </p>
+
+        </div>
+
+
+        <div class="card">
+
+            <h3>✅ Completed Repairs</h3>
+
+            <p id="completed-repairs">
+                --
+            </p>
+
+        </div>
+
+    </section>
+
+
+    <!-- ==================================================
+         ACTIONS
+         ================================================== -->
+
+    <section class="actions">
+
+        <button onclick="loadDashboard()">
+            📊 Dashboard
+        </button>
+
+        <button onclick="showEquipmentMessage()">
+            ⚙️ Equipment
+        </button>
+
+        <button onclick="showDiagnosisMessage()">
+            🤖 Diagnosis
+        </button>
+
+        <button onclick="showAnalyticsMessage()">
+            📈 Analytics
+        </button>
+
+    </section>
+
+
+    <!-- ==================================================
+         EQUIPMENT MANAGEMENT
+         ================================================== -->
+
+    <section class="equipment-section">
+
+        <h2>
+            ⚙️ Equipment Management
+        </h2>
+
+
+        <div class="equipment-form">
+
+            <input
+                type="text"
+                id="equipment-id"
+                placeholder="Equipment ID"
+            >
+
+            <input
+                type="text"
+                id="equipment-name"
+                placeholder="Equipment Name"
+            >
+
+            <input
+                type="text"
+                id="equipment-category"
+                placeholder="Category"
+            >
+
+            <input
+                type="text"
+                id="equipment-location"
+                placeholder="Location"
+            >
+
+            <input
+                type="text"
+                id="equipment-manufacturer"
+                placeholder="Manufacturer"
+            >
+
+            <input
+                type="text"
+                id="equipment-model"
+                placeholder="Model"
+            >
+
+            <input
+                type="text"
+                id="equipment-serial"
+                placeholder="Serial Number"
+            >
+
+            <input
+                type="text"
+                id="equipment-date"
+                placeholder="Installation Date"
+            >
+
+
+            <button onclick="registerEquipment()">
+                ➕ Register Equipment
+            </button>
+
+        </div>
+
+
+        <hr>
+
+
+        <h3>
+            📋 Equipment List
+        </h3>
+
+
+        <button onclick="loadEquipment()">
+            🔄 Refresh Equipment
+        </button>
+
+
+        <div id="equipment-list">
+
+            <p>
+                No equipment loaded.
+            </p>
+
+        </div>
+
+    </section>
+
+
+    <!-- ==================================================
+         WORK ORDER MANAGEMENT — v3.1
+         ================================================== -->
+
+    <section class="work-order-section">
+
+        <h2>
+            🛠️ Work Order Management
+        </h2>
+
+
+        <!-- WORK ORDER STATISTICS -->
+
+        <div class="work-order-stats">
+
+
+            <div class="card">
+
+                <h3>
+                    📋 Total Work Orders
+                </h3>
+
+                <p id="total-work-orders">
+                    --
+                </p>
+
+            </div>
+
+
+            <div class="card">
+
+                <h3>
+                    🟢 Open
+                </h3>
+
+                <p id="open-work-orders">
+                    --
+                </p>
+
+            </div>
+
+
+            <div class="card">
+
+                <h3>
+                    🟡 In Progress
+                </h3>
+
+                <p id="in-progress-work-orders">
+                    --
+                </p>
+
+            </div>
+
+
+            <div class="card">
+
+                <h3>
+                    🔵 Completed
+                </h3>
+
+                <p id="completed-work-orders">
+                    --
+                </p>
+
+            </div>
+
+
+            <div class="card">
+
+                <h3>
+                    🔴 High Priority
+                </h3>
+
+                <p id="high-priority-work-orders">
+                    --
+                </p>
+
+            </div>
+
+
+        </div>
+
+
+        <!-- CREATE WORK ORDER -->
+
+        <h3>
+            ➕ Create Work Order
+        </h3>
+
+
+        <div class="work-order-form">
+
+
+            <input
+                type="text"
+                id="work-order-id"
+                placeholder="Work Order ID"
+            >
+
+
+            <input
+                type="text"
+                id="work-order-equipment"
+                placeholder="Equipment ID"
+            >
+
+
+            <input
+                type="text"
+                id="work-order-technician"
+                placeholder="Technician ID (optional)"
+            >
+
+
+            <select id="work-order-type">
+
+                <option value="Repair">
+                    Repair
+                </option>
+
+                <option value="Maintenance">
+                    Maintenance
+                </option>
+
+                <option value="Inspection">
+                    Inspection
+                </option>
+
+                <option value="Emergency">
+                    Emergency
+                </option>
+
+            </select>
+
+
+            <select id="work-order-priority">
+
+                <option value="Low">
+                    Low
+                </option>
+
+                <option value="Medium">
+                    Medium
+                </option>
+
+                <option value="High">
+                    High
+                </option>
+
+                <option value="Critical">
+                    Critical
+                </option>
+
+            </select>
+
+
+            <textarea
+                id="work-order-description"
+                placeholder="Work Order Description"
+            ></textarea>
+
+
+            <input
+                type="date"
+                id="work-order-scheduled"
+            >
+
+
+            <input
+                type="date"
+                id="work-order-due"
+            >
+
+
+            <button onclick="createWorkOrder()">
+                ➕ Create Work Order
+            </button>
+
+        </div>
+
+
+        <hr>
+
+
+        <!-- WORK ORDER LIST -->
+
+        <h3>
+            📋 Work Orders
+        </h3>
+
+
+        <button onclick="loadWorkOrders()">
+            🔄 Refresh Work Orders
+        </button>
+
+
+        <button onclick="loadWorkOrderStatistics()">
+            📊 Refresh Statistics
+        </button>
+
+
+        <div id="work-order-list">
+
+            <p>
+                No work orders loaded.
+            </p>
+
+        </div>
+
+    </section>
+
+
+    <!-- ==================================================
+         MESSAGE
+         ================================================== -->
+
+    <section id="message"></section>
+
+
+</main>
+
+
+<!-- ==================================================
+     FOOTER
+     ================================================== -->
+
+<footer>
+
+    <p>
+        FuElectric-AI v3.1
+    </p>
+
+</footer>
+```
+
+</div>
+
+<script src="app.js"></script>
 
 </body>
 
-</html>  
-
-<!-- EQUIPMENT MANAGEMENT -->
-
-<section class="equipment-panel">
-
-    <h2>⚙️ Equipment Management</h2>
-
-    <div class="equipment-form">
-
-        <input
-            type="text"
-            id="equipment-id"
-            placeholder="Equipment ID"
-        >
-
-        <input
-            type="text"
-            id="equipment-name"
-            placeholder="Equipment Name"
-        >
-
-        <input
-            type="text"
-            id="equipment-category"
-            placeholder="Category"
-        >
-
-        <input
-            type="text"
-            id="equipment-location"
-            placeholder="Location"
-        >
-
-        <input
-            type="text"
-            id="equipment-manufacturer"
-            placeholder="Manufacturer"
-        >
-
-        <input
-            type="text"
-            id="equipment-model"
-            placeholder="Model"
-        >
-
-        <input
-            type="text"
-            id="equipment-serial"
-            placeholder="Serial Number"
-        >
-
-        <input
-            type="text"
-            id="equipment-date"
-            placeholder="Installation Date"
-        >
-
-        <button onclick="registerEquipment()">
-            ➕ Register Equipment
-        </button>
-
-    </div>
-
-    <hr>
-
-    <h3>📋 Equipment List</h3>
-
-    <button onclick="loadEquipment()">
-        🔄 Refresh Equipment
-    </button>
-
-    <div id="equipment-list">
-        <p>No equipment loaded.</p>
-    </div>
-
-</section>
+</html>

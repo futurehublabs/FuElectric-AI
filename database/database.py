@@ -157,6 +157,47 @@ def create_tables():
         """)
 
         # ======================================================
+        # WORK ORDERS TABLE — FuElectric-AI v3.1
+        # ======================================================
+
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS work_orders (
+
+                work_order_id TEXT PRIMARY KEY,
+
+                equipment_id TEXT NOT NULL,
+
+                technician_id TEXT,
+
+                work_type TEXT NOT NULL,
+
+                priority TEXT DEFAULT 'Medium',
+
+                description TEXT NOT NULL,
+
+                scheduled_date TEXT,
+
+                due_date TEXT,
+
+                completed_date TEXT,
+
+                status TEXT DEFAULT 'Open',
+
+                technician_notes TEXT,
+
+                created_at TEXT NOT NULL,
+
+                FOREIGN KEY (equipment_id)
+                REFERENCES equipment(equipment_id)
+                ON DELETE CASCADE,
+
+                FOREIGN KEY (technician_id)
+                REFERENCES technicians(technician_id)
+
+            )
+        """)
+
+        # ======================================================
         # USERS TABLE
         # ======================================================
 
@@ -181,9 +222,6 @@ def create_tables():
     finally:
 
         conn.close()
-
-
-# ==========================================================
 # EQUIPMENT FUNCTIONS
 # ==========================================================
 
@@ -1245,6 +1283,296 @@ def delete_user(
         conn.commit()
 
         return cursor.rowcount > 0
+
+    finally:
+
+        conn.close()
+
+# ==========================================================
+# WORK ORDER FUNCTIONS — FuElectric-AI v3.1
+# ==========================================================
+
+def add_work_order(work_order):
+    """
+    Create a new work order.
+    """
+
+    conn = get_connection()
+
+    try:
+
+        conn.execute("""
+            INSERT INTO work_orders (
+                work_order_id,
+                equipment_id,
+                technician_id,
+                work_type,
+                priority,
+                description,
+                scheduled_date,
+                due_date,
+                completed_date,
+                status,
+                technician_notes,
+                created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            work_order.work_order_id,
+            work_order.equipment_id,
+            work_order.technician_id,
+            work_order.work_type,
+            work_order.priority,
+            work_order.description,
+            work_order.scheduled_date,
+            work_order.due_date,
+            work_order.completed_date,
+            work_order.status,
+            work_order.technician_notes,
+            work_order.created_at
+        ))
+
+        conn.commit()
+
+    finally:
+
+        conn.close()
+
+
+def get_all_work_orders():
+    """
+    Return all work orders.
+    """
+
+    conn = get_connection()
+
+    try:
+
+        cursor = conn.execute("""
+            SELECT *
+            FROM work_orders
+            ORDER BY created_at DESC
+        """)
+
+        work_orders = cursor.fetchall()
+
+        return [dict(row) for row in work_orders]
+
+    finally:
+
+        conn.close()
+
+
+def get_work_order_by_id(work_order_id: str):
+    """
+    Return one work order by ID.
+    """
+
+    conn = get_connection()
+
+    try:
+
+        cursor = conn.execute("""
+            SELECT *
+            FROM work_orders
+            WHERE work_order_id = ?
+        """, (work_order_id,))
+
+        work_order = cursor.fetchone()
+
+        if work_order:
+            return dict(work_order)
+
+        return None
+
+    finally:
+
+        conn.close()
+
+
+def get_work_orders_by_equipment(equipment_id: str):
+    """
+    Return all work orders belonging to an equipment item.
+    """
+
+    conn = get_connection()
+
+    try:
+
+        cursor = conn.execute("""
+            SELECT *
+            FROM work_orders
+            WHERE equipment_id = ?
+            ORDER BY created_at DESC
+        """, (equipment_id,))
+
+        work_orders = cursor.fetchall()
+
+        return [dict(row) for row in work_orders]
+
+    finally:
+
+        conn.close()
+
+
+def get_work_orders_by_technician(technician_id: str):
+    """
+    Return all work orders assigned to a technician.
+    """
+
+    conn = get_connection()
+
+    try:
+
+        cursor = conn.execute("""
+            SELECT *
+            FROM work_orders
+            WHERE technician_id = ?
+            ORDER BY created_at DESC
+        """, (technician_id,))
+
+        work_orders = cursor.fetchall()
+
+        return [dict(row) for row in work_orders]
+
+    finally:
+
+        conn.close()
+
+
+def update_work_order(work_order_id: str, work_order):
+    """
+    Update an existing work order.
+    """
+
+    conn = get_connection()
+
+    try:
+
+        conn.execute("""
+            UPDATE work_orders
+            SET
+                equipment_id = ?,
+                technician_id = ?,
+                work_type = ?,
+                priority = ?,
+                description = ?,
+                scheduled_date = ?,
+                due_date = ?,
+                completed_date = ?,
+                status = ?,
+                technician_notes = ?
+            WHERE work_order_id = ?
+        """, (
+            work_order.equipment_id,
+            work_order.technician_id,
+            work_order.work_type,
+            work_order.priority,
+            work_order.description,
+            work_order.scheduled_date,
+            work_order.due_date,
+            work_order.completed_date,
+            work_order.status,
+            work_order.technician_notes,
+            work_order_id
+        ))
+
+        conn.commit()
+
+    finally:
+
+        conn.close()
+
+
+def delete_work_order(work_order_id: str) -> bool:
+    """
+    Delete a work order.
+    """
+
+    conn = get_connection()
+
+    try:
+
+        cursor = conn.execute("""
+            DELETE FROM work_orders
+            WHERE work_order_id = ?
+        """, (work_order_id,))
+
+        conn.commit()
+
+        return cursor.rowcount > 0
+
+    finally:
+
+        conn.close()
+
+
+def get_work_order_statistics():
+    """
+    Return Work Order statistics for the dashboard.
+    """
+
+    conn = get_connection()
+
+    try:
+
+        total = conn.execute("""
+            SELECT COUNT(*)
+            FROM work_orders
+        """).fetchone()[0]
+
+        open_orders = conn.execute("""
+            SELECT COUNT(*)
+            FROM work_orders
+            WHERE status = 'Open'
+        """).fetchone()[0]
+
+        assigned_orders = conn.execute("""
+            SELECT COUNT(*)
+            FROM work_orders
+            WHERE status = 'Assigned'
+        """).fetchone()[0]
+
+        in_progress = conn.execute("""
+            SELECT COUNT(*)
+            FROM work_orders
+            WHERE status = 'In Progress'
+        """).fetchone()[0]
+
+        completed = conn.execute("""
+            SELECT COUNT(*)
+            FROM work_orders
+            WHERE status = 'Completed'
+        """).fetchone()[0]
+
+        cancelled = conn.execute("""
+            SELECT COUNT(*)
+            FROM work_orders
+            WHERE status = 'Cancelled'
+        """).fetchone()[0]
+
+        critical = conn.execute("""
+            SELECT COUNT(*)
+            FROM work_orders
+            WHERE priority = 'Critical'
+        """).fetchone()[0]
+
+        high_priority = conn.execute("""
+            SELECT COUNT(*)
+            FROM work_orders
+            WHERE priority = 'High'
+        """).fetchone()[0]
+
+        return {
+            "total_work_orders": total,
+            "open_work_orders": open_orders,
+            "assigned_work_orders": assigned_orders,
+            "in_progress_work_orders": in_progress,
+            "completed_work_orders": completed,
+            "cancelled_work_orders": cancelled,
+            "critical_work_orders": critical,
+            "high_priority_work_orders": high_priority
+        }
 
     finally:
 
