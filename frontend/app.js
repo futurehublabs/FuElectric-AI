@@ -223,136 +223,107 @@ async function registerEquipment() {
     }
 }
 
-
 // ==========================================================
-// LOAD EQUIPMENT
+// EQUIPMENT SELECTOR — v3.2
 // ==========================================================
 
 async function loadEquipment() {
 
     try {
 
-        const response =
-            await fetch(`${API_URL}/equipment`);
-
+        const response = await fetch(
+            `${API_URL}/equipment`
+        );
 
         if (!response.ok) {
 
             throw new Error(
                 `Equipment request failed: ${response.status}`
             );
-        }
 
+        }
 
         const equipment =
             await response.json();
 
-
         console.log(
-            "Equipment data:",
+            "Equipment loaded for selector:",
             equipment
         );
 
+        const selector =
+            document.getElementById(
+                "equipment-select"
+            );
 
-        const container =
-            document.getElementById("equipment-list");
+        if (!selector) {
 
-
-        if (!container) {
-            return;
-        }
-
-
-        container.innerHTML = "";
-
-
-        if (
-            !Array.isArray(equipment) ||
-            equipment.length === 0
-        ) {
-
-            container.innerHTML =
-                "<p>No equipment registered yet.</p>";
+            console.error(
+                "Equipment selector not found."
+            );
 
             return;
         }
 
+        // Clear existing options
+
+        selector.innerHTML =
+            `<option value="">Select Equipment</option>`;
+
+        // Add equipment to dropdown
 
         equipment.forEach(item => {
 
-            const card =
-                document.createElement("div");
+            const option =
+                document.createElement("option");
 
+            option.value =
+                item.equipment_id;
 
-            card.className =
-                "equipment-item";
+            option.textContent =
+                `${item.equipment_id} — ${item.name}`;
 
-
-            card.innerHTML = `
-
-                <h3>
-                    ⚙️ ${item.name ?? "Unnamed Equipment"}
-                </h3>
-
-                <p>
-                    <strong>ID:</strong>
-                    ${item.equipment_id ?? "N/A"}
-                </p>
-
-                <p>
-                    <strong>Category:</strong>
-                    ${item.category ?? "N/A"}
-                </p>
-
-                <p>
-                    <strong>Location:</strong>
-                    ${item.location ?? "N/A"}
-                </p>
-
-                <p>
-                    <strong>Manufacturer:</strong>
-                    ${item.manufacturer ?? "N/A"}
-                </p>
-
-                <p>
-                    <strong>Model:</strong>
-                    ${item.model ?? "N/A"}
-                </p>
-
-                <p>
-                    <strong>Serial Number:</strong>
-                    ${item.serial_number ?? "N/A"}
-                </p>
-
-                <p>
-                    <strong>Installation Date:</strong>
-                    ${item.installation_date ?? "N/A"}
-                </p>
-
-            `;
-
-
-            container.appendChild(card);
+            selector.appendChild(option);
 
         });
 
-    }
+        console.log(
+            "Equipment selector populated successfully."
+        );
 
-    catch (error) {
+        // Listen for equipment selection
+
+        selector.addEventListener(
+            "change",
+            () => {
+
+                const equipmentId =
+                    selector.value;
+
+                if (!equipmentId) {
+                    return;
+                }
+
+                loadEquipmentHealth(
+                    equipmentId
+                );
+
+            }
+        );
+
+    } catch (error) {
 
         console.error(
             "Equipment loading error:",
             error
         );
 
-        showMessage(
-            "Could not load equipment."
-        );
     }
+
 }
 
 // ==========================================================
-// EQUIPMENT HEALTH — v3.2
+// EQUIPMENT HEALTH — v3.2.1
 // ==========================================================
 
 async function loadEquipmentHealth() {
@@ -360,107 +331,149 @@ async function loadEquipmentHealth() {
     try {
 
         // Get registered equipment
-
         const equipmentResponse = await fetch(
             `${API_URL}/equipment`
         );
 
         if (!equipmentResponse.ok) {
-
             throw new Error(
                 `Equipment request failed: ${equipmentResponse.status}`
             );
-
         }
 
         const equipment =
             await equipmentResponse.json();
 
-
-        // No equipment available
-
-        if (
-            !Array.isArray(equipment) ||
-            equipment.length === 0
-        ) {
-
-            console.log(
-                "No equipment available for health check."
+        const selector =
+            document.getElementById(
+                "equipment-health-select"
             );
 
+        if (!selector) {
+            console.error(
+                "Equipment health selector not found."
+            );
             return;
         }
 
+        // Clear existing options
+        selector.innerHTML = `
+            <option value="">
+                Select Equipment
+            </option>
+        `;
 
-        // Use the first equipment
+        // Add equipment to dropdown
+        equipment.forEach(item => {
 
-        const equipmentId =
-            equipment[0].equipment_id;
+            const option =
+                document.createElement("option");
 
+            option.value =
+                item.equipment_id;
 
-        // Get health information
+            option.textContent =
+                `${item.equipment_id} — ${item.name}`;
 
-        const healthResponse =
-            await fetch(
-                `${API_URL}/equipment/${equipmentId}/health`
-            );
+            selector.appendChild(option);
 
+        });
 
-        if (!healthResponse.ok) {
+        // Listen for equipment selection
+        selector.onchange = async function () {
 
-            throw new Error(
-                `Health request failed: ${healthResponse.status}`
-            );
+            const equipmentId =
+                this.value;
 
-        }
+            const healthElement =
+                document.getElementById(
+                    "equipment-health"
+                );
 
+            const statusElement =
+                document.getElementById(
+                    "equipment-health-status"
+                );
 
-        const health =
-            await healthResponse.json();
+            // Nothing selected
+            if (!equipmentId) {
 
+                if (healthElement) {
+                    healthElement.textContent = "--";
+                }
 
-        console.log(
-            "Equipment health:",
-            health
-        );
+                if (statusElement) {
+                    statusElement.textContent =
+                        "Select equipment to view health";
+                }
 
+                return;
+            }
 
-        // Health score
+            try {
 
-        const healthElement =
-            document.getElementById(
-                "equipment-health"
-            );
+                // Request health information
+                const healthResponse =
+                    await fetch(
+                        `${API_URL}/equipment/${equipmentId}/health`
+                    );
 
+                if (!healthResponse.ok) {
 
-        if (healthElement) {
+                    throw new Error(
+                        `Health request failed: ${healthResponse.status}`
+                    );
 
-            healthElement.textContent =
-                `${health.health_score}%`;
+                }
 
-        }
+                const health =
+                    await healthResponse.json();
 
+                console.log(
+                    "Equipment health:",
+                    health
+                );
 
-        // Health status
+                // Display health score
+                if (healthElement) {
 
-        const statusElement =
-            document.getElementById(
-                "equipment-health-status"
-            );
+                    healthElement.textContent =
+                        `${health.health_score}%`;
 
+                }
 
-        if (statusElement) {
+                // Display health status
+                if (statusElement) {
 
-            statusElement.textContent =
-                `${health.status} — ${health.equipment_id}`;
+                    statusElement.textContent =
+                        `${health.status} — ${health.equipment_id}`;
 
-        }
+                }
 
+            } catch (error) {
+
+                console.error(
+                    "Equipment health error:",
+                    error
+                );
+
+                if (healthElement) {
+                    healthElement.textContent = "--";
+                }
+
+                if (statusElement) {
+                    statusElement.textContent =
+                        "Could not load equipment health.";
+                }
+
+            }
+
+        };
 
     } catch (error) {
 
         console.error(
-            "Equipment health error:",
+            "Equipment health loading error:",
             error
         );
 
@@ -960,6 +973,8 @@ window.addEventListener(
         loadWorkOrders();
 
         loadWorkOrderStatistics();
+
+        loadEquipmentHealth();
 
         loadEquipmentHealth();
 
