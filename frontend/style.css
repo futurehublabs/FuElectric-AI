@@ -158,3 +158,147 @@ footer {
     }
 
 }
+
+/* ==========================================================
+   FUELECTRIC-AI — DIAGNOSIS RESULT CARD
+   ========================================================== */
+
+.diagnosis-result {
+    margin-top: 20px;
+    padding: 25px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+.diagnosis-card h3 {
+    margin-top: 0;
+    font-size: 24px;
+}
+
+.diagnosis-equipment {
+    font-size: 18px;
+    margin-bottom: 15px;
+}
+
+.diagnosis-summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin: 20px 0;
+}
+
+.diagnosis-summary div {
+    padding: 15px;
+    background: #f5f7fa;
+    border-radius: 8px;
+}
+
+.diagnosis-section-title {
+    margin-top: 22px;
+    margin-bottom: 8px;
+    font-size: 17px;
+}
+
+.diagnosis-card ul {
+    margin-top: 5px;
+    padding-left: 25px;
+}
+
+.diagnosis-card li {
+    margin-bottom: 5px;
+}
+
+.diagnosis-emergency {
+    padding: 15px;
+    margin-top: 20px;
+    border-radius: 8px;
+    font-weight: bold;
+}
+
+.diagnosis-normal {
+    padding: 15px;
+    margin-top: 20px;
+    border-radius: 8px;
+}
+
+@media (max-width: 700px) {
+
+    .diagnosis-summary {
+        grid-template-columns: 1fr;
+    }
+
+}
+
+/* ==========================================================
+   MAINTENANCE INTELLIGENCE — v3.3
+   ========================================================== */
+
+.maintenance-intelligence {
+    margin-top: 30px;
+    padding: 25px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+.maintenance-alert-summary {
+    margin: 20px 0;
+}
+
+.maintenance-alert-card {
+    margin-top: 15px;
+    padding: 20px;
+    background: #fff8e1;
+    border-left: 5px solid #f0ad00;
+    border-radius: 8px;
+}
+
+.maintenance-alert-card h3 {
+    margin-top: 0;
+}
+
+.maintenance-action {
+    margin-top: 15px;
+    padding: 12px;
+    background: #f5f7fa;
+    border-radius: 6px;
+}
+
+.maintenance-ok {
+    margin-top: 15px;
+    padding: 15px;
+    background: #e8f5e9;
+    border-radius: 8px;
+    font-weight: bold;
+}
+
+.maintenance-error {
+    margin-top: 15px;
+    padding: 15px;
+    background: #ffebee;
+    border-radius: 8px;
+}
+
+/* ==========================================================
+   PAGE SCROLL FIX — FuElectric-AI
+   ========================================================== */
+
+html,
+body {
+    min-height: 100%;
+    height: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.app {
+    min-height: 100vh;
+    height: auto;
+    overflow: visible;
+}
+
+main {
+    height: auto;
+    overflow: visible;
+}

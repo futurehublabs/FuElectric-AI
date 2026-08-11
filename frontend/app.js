@@ -102,6 +102,197 @@ async function loadDashboard() {
     }
 }
 
+// ==========================================================
+// MAINTENANCE INTELLIGENCE — v3.3
+// ==========================================================
+
+async function loadMaintenanceAlerts() {
+
+    const countElement =
+        document.getElementById(
+            "maintenance-alert-count"
+        );
+
+    const listElement =
+        document.getElementById(
+            "maintenance-alert-list"
+        );
+
+    // Check that the HTML elements exist
+    if (!countElement || !listElement) {
+
+        console.error(
+            "Maintenance alert elements not found."
+        );
+
+        return;
+    }
+
+    try {
+
+        const response = await fetch(
+            `${API_URL}/maintenance/alerts`
+        );
+
+        if (!response.ok) {
+
+            throw new Error(
+                `Maintenance alert request failed: ${response.status}`
+            );
+
+        }
+
+        const data = await response.json();
+
+        console.log(
+            "Maintenance alerts:",
+            data
+        );
+
+        countElement.textContent =
+            data.total_alerts;
+
+        if (
+            !data.alerts ||
+            data.alerts.length === 0
+        ) {
+
+            listElement.innerHTML = `
+                <div class="maintenance-ok">
+                    ✅ No maintenance alerts.
+                </div>
+            `;
+
+            return;
+        }
+
+        listElement.innerHTML =
+            data.alerts.map(alert => {
+
+                const maintenanceStatus =
+                    alert.last_maintenance
+                        ? `Last maintenance: ${alert.last_maintenance}`
+                        : "⚠️ No maintenance record";
+
+                return `
+                    <div class="maintenance-alert-card">
+
+                        <h3>
+                            ⚠️ ${alert.name}
+                        </h3>
+
+                        <p>
+                            <strong>Equipment ID:</strong>
+                            ${alert.equipment_id}
+                        </p>
+
+                        <p>
+                            <strong>Status:</strong>
+                            ${alert.status}
+                        </p>
+
+                        <p>
+                            <strong>Maintenance:</strong>
+                            ${maintenanceStatus}
+                        </p>
+
+                        <div class="maintenance-action">
+
+                            🛠️ Recommended Action:
+
+                            <strong>
+                                Schedule maintenance inspection
+                            </strong>
+
+                        </div>
+
+                        <button
+                            onclick="viewMaintenanceEquipment('${alert.equipment_id}')"
+                        >
+                            🔍 View Equipment
+                        </button>
+
+                    </div>
+                `;
+
+            }).join("");
+
+    } catch (error) {
+
+        console.error(
+            "Maintenance alert error:",
+            error
+        );
+
+        countElement.textContent = "--";
+
+        listElement.innerHTML = `
+            <div class="maintenance-error">
+
+                ❌ Unable to load maintenance alerts.
+
+                <br>
+
+                ${error.message}
+
+            </div>
+        `;
+    }
+}
+
+// ==========================================================
+// MAINTENANCE ALERT — VIEW EQUIPMENT
+// ==========================================================
+
+function viewMaintenanceEquipment(equipmentId) {
+
+    console.log(
+        "Viewing maintenance equipment:",
+        equipmentId
+    );
+
+    const selector =
+        document.getElementById(
+            "equipment-health-select"
+        );
+
+    if (!selector) {
+
+        console.error(
+            "Equipment health selector not found."
+        );
+
+        return;
+    }
+
+    // Select the equipment
+    selector.value = equipmentId;
+
+    // Trigger the health lookup
+    selector.dispatchEvent(
+        new Event("change")
+    );
+
+    // Find the Equipment Health card
+    const healthCard =
+        selector.closest(".card");
+
+    if (healthCard) {
+
+        healthCard.scrollIntoView({
+            behavior: "smooth",
+            block: "center"
+        });
+
+    } else {
+
+        // Fallback
+        selector.scrollIntoView({
+            behavior: "smooth",
+            block: "center"
+        });
+    }
+}
 
 // ==========================================================
 // REGISTER EQUIPMENT
@@ -480,6 +671,338 @@ async function loadEquipmentHealth() {
     }
 
 }
+
+// ==========================================================
+// AI DIAGNOSIS
+// ==========================================================
+
+async function loadDiagnosisEquipment() {
+
+    try {
+
+        const response = await fetch(
+            `${API_URL}/equipment`
+        );
+
+        if (!response.ok) {
+            throw new Error(
+                `Equipment request failed: ${response.status}`
+            );
+        }
+
+        const equipment = await response.json();
+
+        const selector =
+            document.getElementById(
+                "diagnosis-equipment"
+            );
+
+        if (!selector) {
+            return;
+        }
+
+        selector.innerHTML =
+            `<option value="">Select Equipment</option>`;
+
+        equipment.forEach(item => {
+
+            const option =
+                document.createElement("option");
+
+            option.value =
+                item.equipment_id;
+
+            option.textContent =
+                `${item.equipment_id} — ${item.name}`;
+
+            selector.appendChild(option);
+
+        });
+
+    } catch (error) {
+
+        console.error(
+            "Diagnosis equipment loading error:",
+            error
+        );
+
+    }
+
+}
+
+
+async function runDiagnosis() {
+
+    const equipmentSelect =
+        document.getElementById("diagnosis-equipment");
+
+    const faultSelect =
+        document.getElementById("diagnosis-fault");
+
+    const result =
+        document.getElementById("diagnosis-result");
+
+    const equipment =
+        equipmentSelect.value;
+
+    const fault =
+        faultSelect.value;
+
+    if (!equipment || !fault) {
+
+        result.innerHTML = `
+            <div class="diagnosis-card">
+                <h3>🤖 Diagnosis</h3>
+                <p>
+                    Please select both equipment and a fault.
+                </p>
+            </div>
+        `;
+
+        return;
+    }
+
+    result.innerHTML = `
+        <div class="diagnosis-card">
+            <h3>🔄 FuElectric-AI is analysing...</h3>
+            <p>Please wait.</p>
+        </div>
+    `;
+
+    try {
+
+        const response = await fetch(
+            `${API_URL}/diagnose`,
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify({
+                    equipment: equipment,
+                    fault: fault
+                })
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.detail ||
+                "Diagnosis failed."
+            );
+        }
+
+        const causes =
+            data.causes || [];
+
+        const recommendations =
+            data.recommendations || [];
+
+        const tools =
+            data.tools || [];
+
+        const spareParts =
+            data.spare_parts || [];
+
+        const safety =
+            data.safety_precautions || [];
+
+        const preventive =
+            data.preventive_maintenance || [];
+
+        const emergencyMessage =
+            data.is_emergency
+                ? `
+                    <div class="diagnosis-emergency">
+                        🚨 EMERGENCY WARNING<br>
+                        This fault requires immediate attention.
+                        Stop using the equipment and contact a
+                        qualified technician.
+                    </div>
+                `
+                : `
+                    <div class="diagnosis-normal">
+                        ✅ No emergency condition identified
+                        in the diagnostic knowledge base.
+                    </div>
+                `;
+
+        result.innerHTML = `
+
+            <div class="diagnosis-card">
+
+                <h3>
+                    🤖 FuElectric-AI Diagnosis Result
+                </h3>
+
+                <div class="diagnosis-equipment">
+
+                    <strong>Equipment:</strong>
+                    ${data.equipment_name}
+
+                    <br>
+
+                    <strong>Equipment ID:</strong>
+                    ${data.equipment_id}
+
+                    <br>
+
+                    <strong>Fault:</strong>
+                    ${data.fault}
+
+                </div>
+
+
+                <div class="diagnosis-summary">
+
+                    <div>
+                        <strong>Category</strong>
+                        <br>
+                        ${data.category}
+                    </div>
+
+                    <div>
+                        <strong>Severity</strong>
+                        <br>
+                        ${data.severity}/5
+                    </div>
+
+                    <div>
+                        <strong>Risk Level</strong>
+                        <br>
+                        ${data.risk_level}
+                    </div>
+
+                    <div>
+                        <strong>Emergency</strong>
+                        <br>
+                        ${data.is_emergency ? "YES" : "NO"}
+                    </div>
+
+                    <div>
+                        <strong>Repair Time</strong>
+                        <br>
+                        ${data.repair_time}
+                    </div>
+
+                    <div>
+                        <strong>Skill Level</strong>
+                        <br>
+                        ${data.skill_level}
+                    </div>
+
+                </div>
+
+
+                <h4 class="diagnosis-section-title">
+                    🔍 Possible Causes
+                </h4>
+
+                <ul>
+                    ${
+                        causes.map(
+                            item => `<li>${item}</li>`
+                        ).join("")
+                    }
+                </ul>
+
+
+                <h4 class="diagnosis-section-title">
+                    🛠️ Recommendations
+                </h4>
+
+                <ul>
+                    ${
+                        recommendations.map(
+                            item => `<li>${item}</li>`
+                        ).join("")
+                    }
+                </ul>
+
+
+                <h4 class="diagnosis-section-title">
+                    🔧 Required Tools
+                </h4>
+
+                <ul>
+                    ${
+                        tools.map(
+                            item => `<li>${item}</li>`
+                        ).join("")
+                    }
+                </ul>
+
+
+                <h4 class="diagnosis-section-title">
+                    🔩 Spare Parts
+                </h4>
+
+                <ul>
+                    ${
+                        spareParts.map(
+                            item => `<li>${item}</li>`
+                        ).join("")
+                    }
+                </ul>
+
+
+                <h4 class="diagnosis-section-title">
+                    🦺 Safety Precautions
+                </h4>
+
+                <ul>
+                    ${
+                        safety.map(
+                            item => `<li>${item}</li>`
+                        ).join("")
+                    }
+                </ul>
+
+
+                <h4 class="diagnosis-section-title">
+                    🔄 Preventive Maintenance
+                </h4>
+
+                <ul>
+                    ${
+                        preventive.map(
+                            item => `<li>${item}</li>`
+                        ).join("")
+                    }
+                </ul>
+
+
+                ${emergencyMessage}
+
+            </div>
+        `;
+
+    } catch (error) {
+
+        console.error(
+            "Diagnosis error:",
+            error
+        );
+
+        result.innerHTML = `
+            <div class="diagnosis-card">
+
+                <h3>❌ Diagnosis Error</h3>
+
+                <p>
+                    ${error.message}
+                </p>
+
+            </div>
+        `;
+    }
+}
+
 
 // ==========================================================
 // WORK ORDER MANAGEMENT
@@ -976,7 +1499,9 @@ window.addEventListener(
 
         loadEquipmentHealth();
 
-        loadEquipmentHealth();
+        loadDiagnosisEquipment();
+
+        loadMaintenanceAlerts();
 
     }
 );

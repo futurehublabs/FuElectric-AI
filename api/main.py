@@ -144,15 +144,19 @@ def health():
 @app.post("/diagnose")
 def diagnose(request: DiagnosisRequest):
 
-    equipment = request.equipment.lower()
-    fault = request.fault.lower()
+    equipment_id = request.equipment.strip()
+    fault = request.fault.strip().lower()
 
-    if equipment not in HOME_APPLIANCE_FAULTS:
+    # Check that the equipment actually exists
+    equipment = get_equipment_by_id(equipment_id)
+
+    if equipment is None:
         raise HTTPException(
             status_code=404,
             detail="Equipment not found."
         )
 
+    # Check that the fault exists in the knowledge base
     if fault not in HOME_APPLIANCE_FAULTS:
         raise HTTPException(
             status_code=404,
@@ -162,8 +166,9 @@ def diagnose(request: DiagnosisRequest):
     diagnosis = HOME_APPLIANCE_FAULTS[fault]
 
     return {
-        "equipment": equipment,
-        "fault": request.fault,
+        "equipment_id": equipment_id,
+        "equipment_name": equipment["name"],
+        "fault": fault,
         **diagnosis
     }
 

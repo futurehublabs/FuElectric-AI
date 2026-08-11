@@ -33,7 +33,7 @@
 
 <header>
 
-    <h1>⚡ FuElectric-AI</h1>
+    <h1>⚡ FuElectric-AI - TEST 333</h1>
 
     <p>
         AI Equipment Diagnosis & Maintenance System
@@ -156,6 +156,60 @@
 
     </section>
 
+    <!-- ==================================================
+     MAINTENANCE INTELLIGENCE — v3.3
+     ================================================== -->
+
+<section class="maintenance-intelligence">
+
+    <h2>
+        🧠 Maintenance Intelligence
+    </h2>
+
+    <p>
+        Monitor equipment maintenance status and identify
+        equipment requiring maintenance attention.
+    </p>
+
+    <div class="maintenance-alert-summary">
+
+        <div class="card">
+
+            <h3>
+                🔔 Maintenance Alerts
+            </h3>
+
+            <p id="maintenance-alert-count">
+                --
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- ==================================================
+         MAINTENANCE ALERT LIST
+         ================================================== -->
+
+    <section class="maintenance-alert-section">
+
+        <h2>
+            ⚠️ Maintenance Alerts
+        </h2>
+
+        <div id="maintenance-alert-list">
+
+            <p>
+                Loading maintenance alerts...
+            </p>
+
+        </div>
+
+    </section>
+
+</section>
+
 
     <!-- ==================================================
          ACTIONS
@@ -274,6 +328,92 @@
 
     </section>
 
+
+<!-- ==================================================
+     AI DIAGNOSIS
+     ================================================== -->
+
+<section class="diagnosis-section">
+
+    <h2>
+        🤖 AI Equipment Diagnosis
+    </h2>
+
+    <p>
+        Select registered equipment and identify a fault
+        using the FuElectric-AI diagnostic knowledge base.
+    </p>
+
+    <div class="diagnosis-form">
+
+        <select id="diagnosis-equipment">
+            <option value="">
+                Select Equipment
+            </option>
+        </select>
+
+        <select id="diagnosis-fault">
+            <option value="">
+                Select Fault / Symptom
+            </option>
+
+            <option value="not starting">
+                Not Starting
+            </option>
+
+            <option value="high temperature">
+                High Temperature
+            </option>
+
+            <option value="noise">
+                Noise
+            </option>
+
+            <option value="smoke">
+                Smoke
+            </option>
+
+            <option value="constant vibrating">
+                Constant Vibrating
+            </option>
+
+            <option value="burning smell">
+                Burning Smell
+            </option>
+
+            <option value="sparking">
+                Sparking
+            </option>
+
+            <option value="power fluctuation">
+                Power Fluctuation
+            </option>
+
+            <option value="frequent tripping">
+                Frequent Tripping
+            </option>
+
+            <option value="low performance">
+                Low Performance
+            </option>
+
+        </select>
+
+        <button onclick="runDiagnosis()">
+            🔍 Diagnose Equipment
+        </button>
+
+    </div>
+
+    <div id="diagnosis-result" class="diagnosis-result">
+
+        <p>
+            Select equipment and a fault to begin diagnosis.
+        </p>
+
+    </div>
+
+</section>
 
     <!-- ==================================================
          WORK ORDER MANAGEMENT — v3.1
