@@ -241,6 +241,1275 @@ async function loadMaintenanceAlerts() {
 }
 
 // ==========================================================
+// FuElectric-AI v3.4.1
+// EQUIPMENT MANAGEMENT
+// ==========================================================
+
+let equipmentData = [];
+
+
+// ==========================================================
+// LOAD EQUIPMENT
+// ==========================================================
+
+async function loadEquipment() {
+
+    const tableBody =
+        document.getElementById("equipmentTableBody");
+
+    try {
+
+        const response =
+            await fetch(`${API_URL}/equipment`);
+
+        if (!response.ok) {
+
+            throw new Error(
+                `Equipment request failed: ${response.status}`
+            );
+
+        }
+
+        const equipment =
+            await response.json();
+
+        console.log(
+            "Equipment loaded:",
+            equipment
+        );
+
+        equipmentData = Array.isArray(equipment)
+            ? equipment
+            : [];
+
+        // Display equipment table
+        renderEquipment(equipmentData);
+
+        // Populate health selector
+        populateEquipmentSelector(
+            "equipment-health-select",
+            equipmentData
+        );
+
+        // Populate diagnosis selector
+        populateEquipmentSelector(
+            "diagnosis-equipment",
+            equipmentData
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Equipment loading error:",
+            error
+        );
+
+        if (tableBody) {
+
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="8">
+                        ❌ Unable to load equipment.
+                    </td>
+                </tr>
+            `;
+
+        }
+
+    }
+}
+
+
+// ==========================================================
+// RENDER EQUIPMENT TABLE
+// ==========================================================
+
+function renderEquipment(equipmentList) {
+
+    const tableBody =
+        document.getElementById("equipmentTableBody");
+
+    if (!tableBody) {
+        return;
+    }
+
+
+    if (
+        !equipmentList ||
+        equipmentList.length === 0
+    ) {
+
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="8">
+                    No equipment found.
+                </td>
+            </tr>
+        `;
+
+        return;
+    }
+
+
+    tableBody.innerHTML =
+        equipmentList.map(item => `
+
+            <tr>
+
+                <td>
+                    ${escapeHtml(
+                        item.equipment_id || ""
+                    )}
+                </td>
+
+                <td>
+                    ${escapeHtml(
+                        item.name || ""
+                    )}
+                </td>
+
+                <td>
+                    ${escapeHtml(
+                        item.category || ""
+                    )}
+                </td>
+
+                <td>
+                    ${escapeHtml(
+                        item.manufacturer || "-"
+                    )}
+                </td>
+
+                <td>
+                    ${escapeHtml(
+                        item.model || "-"
+                    )}
+                </td>
+
+                <td>
+                    ${escapeHtml(
+                        item.location || ""
+                    )}
+                </td>
+
+                <td>
+                    ${escapeHtml(
+                        item.status || "Active"
+                    )}
+                </td>
+
+                <td>
+
+                    <button
+                        class="action-btn edit-btn"
+                        onclick="editEquipment('${escapeJs(
+                            item.equipment_id
+                        )}')"
+                    >
+                        ✏️ Edit
+                    </button>
+
+                    <button
+                        class="action-btn delete-btn"
+                        onclick="deleteEquipment('${escapeJs(
+                            item.equipment_id
+                        )}')"
+                    >
+                        🗑️ Delete
+                    </button>
+
+                </td>
+
+            </tr>
+
+        `).join("");
+}
+
+
+// ==========================================================
+// POPULATE EQUIPMENT SELECTOR
+// ==========================================================
+
+function populateEquipmentSelector(
+    selectorId,
+    equipment
+) {
+
+    const selector =
+        document.getElementById(selectorId);
+
+    if (!selector) {
+        return;
+    }
+
+
+    selector.innerHTML = `
+        <option value="">
+            Select Equipment
+        </option>
+    `;
+
+
+    equipment.forEach(item => {
+
+        const option =
+            document.createElement("option");
+
+        option.value =
+            item.equipment_id;
+
+        option.textContent =
+            `${item.equipment_id} — ${item.name}`;
+
+        selector.appendChild(option);
+
+    });
+
+}
+
+
+// ==========================================================
+// OPEN EQUIPMENT FORM
+// ==========================================================
+
+function openEquipmentForm() {
+
+    const modal =
+        document.getElementById(
+            "equipmentModal"
+        );
+
+    const form =
+        document.getElementById(
+            "equipmentForm"
+        );
+
+    const title =
+        document.getElementById(
+            "equipmentModalTitle"
+        );
+
+    const editId =
+        document.getElementById(
+            "editEquipmentId"
+        );
+
+
+    if (!modal || !form) {
+        return;
+    }
+
+
+    form.reset();
+
+    if (title) {
+        title.textContent =
+            "Add Equipment";
+    }
+
+    if (editId) {
+        editId.value = "";
+    }
+
+
+    modal.style.display = "flex";
+
+}
+
+
+// ==========================================================
+// CLOSE EQUIPMENT FORM
+// ==========================================================
+
+function closeEquipmentForm() {
+
+    const modal =
+        document.getElementById(
+            "equipmentModal"
+        );
+
+    if (modal) {
+
+        modal.style.display = "none";
+
+    }
+
+}
+
+
+// ==========================================================
+// ADD / UPDATE EQUIPMENT
+// ==========================================================
+
+const equipmentForm =
+    document.getElementById(
+        "equipmentForm"
+    );
+
+if (equipmentForm) {
+
+    equipmentForm.addEventListener(
+        "submit",
+        async function(event) {
+
+            event.preventDefault();
+
+
+            const editId =
+                document.getElementById(
+                    "editEquipmentId"
+                ).value.trim();
+
+
+            const equipment = {
+
+                equipment_id:
+                    editId ||
+                    generateEquipmentId(),
+
+                name:
+                    document.getElementById(
+                        "equipmentName"
+                    ).value.trim(),
+
+                category:
+                    document.getElementById(
+                        "equipmentCategory"
+                    ).value.trim(),
+
+                manufacturer:
+                    document.getElementById(
+                        "equipmentManufacturer"
+                    ).value.trim(),
+
+                model:
+                    document.getElementById(
+                        "equipmentModel"
+                    ).value.trim(),
+
+                serial_number:
+                    document.getElementById(
+                        "equipmentSerialNumber"
+                    ).value.trim(),
+
+                location:
+                    document.getElementById(
+                        "equipmentLocation"
+                    ).value.trim(),
+
+                installation_date:
+                    document.getElementById(
+                        "equipmentInstallationDate"
+                    ).value,
+
+                status:
+                    document.getElementById(
+                        "equipmentStatus"
+                    ).value
+
+            };
+
+
+            try {
+
+                const url = editId
+                    ? `${API_URL}/equipment/${encodeURIComponent(editId)}`
+                    : `${API_URL}/equipment`;
+
+
+                const method =
+                    editId ? "PUT" : "POST";
+
+
+                const response =
+                    await fetch(
+                        url,
+                        {
+                            method: method,
+
+                            headers: {
+                                "Content-Type":
+                                    "application/json"
+                            },
+
+                            body:
+                                JSON.stringify(
+                                    equipment
+                                )
+                        }
+                    );
+
+
+                const data =
+                    await response.json();
+
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        data.detail ||
+                        "Equipment save failed."
+                    );
+
+                }
+
+
+                closeEquipmentForm();
+
+
+                showMessage(
+                    editId
+                        ? "Equipment updated successfully."
+                        : "Equipment registered successfully."
+                );
+
+
+                await loadEquipment();
+
+                await loadDashboard();
+
+
+            } catch (error) {
+
+                console.error(
+                    "Equipment save error:",
+                    error
+                );
+
+                showMessage(
+                    "Equipment error: " +
+                    error.message
+                );
+
+            }
+
+        }
+    );
+
+}
+
+
+// ==========================================================
+// EDIT EQUIPMENT
+// ==========================================================
+
+function editEquipment(equipmentId) {
+
+    const equipment =
+        equipmentData.find(
+            item =>
+                item.equipment_id === equipmentId
+        );
+
+
+    if (!equipment) {
+
+        showMessage(
+            "Equipment not found."
+        );
+
+        return;
+    }
+
+
+    document.getElementById(
+        "equipmentModalTitle"
+    ).textContent =
+        "Edit Equipment";
+
+
+    document.getElementById(
+        "editEquipmentId"
+    ).value =
+        equipment.equipment_id || "";
+
+
+    document.getElementById(
+        "equipmentName"
+    ).value =
+        equipment.name || "";
+
+
+    document.getElementById(
+        "equipmentCategory"
+    ).value =
+        equipment.category || "";
+
+
+    document.getElementById(
+        "equipmentManufacturer"
+    ).value =
+        equipment.manufacturer || "";
+
+
+    document.getElementById(
+        "equipmentModel"
+    ).value =
+        equipment.model || "";
+
+
+    document.getElementById(
+        "equipmentSerialNumber"
+    ).value =
+        equipment.serial_number || "";
+
+
+    document.getElementById(
+        "equipmentLocation"
+    ).value =
+        equipment.location || "";
+
+
+    document.getElementById(
+        "equipmentInstallationDate"
+    ).value =
+        equipment.installation_date || "";
+
+
+    document.getElementById(
+        "equipmentStatus"
+    ).value =
+        equipment.status || "Active";
+
+
+    document.getElementById(
+        "equipmentModal"
+    ).style.display =
+        "flex";
+
+}
+
+
+// ==========================================================
+// DELETE EQUIPMENT
+// ==========================================================
+
+async function deleteEquipment(
+    equipmentId
+) {
+
+    const confirmed =
+        confirm(
+            `Delete equipment ${equipmentId}?`
+        );
+
+
+    if (!confirmed) {
+        return;
+    }
+
+
+    try {
+
+        const response =
+            await fetch(
+                `${API_URL}/equipment/${encodeURIComponent(
+                    equipmentId
+                )}`,
+                {
+                    method: "DELETE"
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.detail ||
+                "Equipment deletion failed."
+            );
+
+        }
+
+
+        showMessage(
+            "Equipment deleted successfully."
+        );
+
+
+        await loadEquipment();
+
+        await loadDashboard();
+
+
+    } catch (error) {
+
+        console.error(
+            "Delete equipment error:",
+            error
+        );
+
+        showMessage(
+            "Delete error: " +
+            error.message
+        );
+
+    }
+
+}
+
+
+// ==========================================================
+// SEARCH EQUIPMENT
+// ==========================================================
+
+function searchEquipment() {
+
+    const searchInput =
+        document.getElementById(
+            "equipmentSearch"
+        );
+
+
+    if (!searchInput) {
+        return;
+    }
+
+
+    const searchValue =
+        searchInput.value
+            .toLowerCase()
+            .trim();
+
+
+    const filtered =
+        equipmentData.filter(item => {
+
+            return (
+
+                String(
+                    item.equipment_id || ""
+                )
+                .toLowerCase()
+                .includes(searchValue)
+
+                ||
+
+                String(
+                    item.name || ""
+                )
+                .toLowerCase()
+                .includes(searchValue)
+
+                ||
+
+                String(
+                    item.category || ""
+                )
+                .toLowerCase()
+                .includes(searchValue)
+
+                ||
+
+                String(
+                    item.manufacturer || ""
+                )
+                .toLowerCase()
+                .includes(searchValue)
+
+                ||
+
+                String(
+                    item.location || ""
+                )
+                .toLowerCase()
+                .includes(searchValue)
+
+            );
+
+        });
+
+
+    renderEquipment(filtered);
+
+}
+
+
+// ==========================================================
+// FILTER EQUIPMENT BY STATUS
+// ==========================================================
+
+function filterEquipment() {
+
+    const filter =
+        document.getElementById(
+            "equipmentStatusFilter"
+        );
+
+
+    if (!filter) {
+        return;
+    }
+
+
+    const status =
+        filter.value;
+
+
+    if (!status) {
+
+        renderEquipment(
+            equipmentData
+        );
+
+        return;
+    }
+
+
+    const filtered =
+        equipmentData.filter(
+            item =>
+                (item.status || "Active") === status
+        );
+
+
+    renderEquipment(
+        filtered
+    );
+
+}
+
+
+// ==========================================================
+// GENERATE EQUIPMENT ID
+// ==========================================================
+
+function generateEquipmentId() {
+
+    return (
+        "EQ-" +
+        Date.now()
+            .toString()
+            .slice(-8)
+    );
+
+}
+
+
+// ==========================================================
+// HTML SAFETY
+// ==========================================================
+
+function escapeHtml(value) {
+
+    return String(value)
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+        .replace(
+            /</g,
+            "&lt;"
+        )
+        .replace(
+            />/g,
+            "&gt;"
+        )
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+
+}
+
+
+function escapeJs(value) {
+
+    return String(value)
+        .replace(
+            /\\/g,
+            "\\\\"
+        )
+        .replace(
+            /'/g,
+            "\\'"
+        );
+
+}
+
+
+// ==========================================================
+// LOAD EQUIPMENT
+// ==========================================================
+
+async function loadEquipment() {
+
+    const tableBody = document.getElementById("equipmentTableBody");
+
+    try {
+
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="8">Loading equipment...</td>
+            </tr>
+        `;
+
+        const response = await fetch(`${API_URL}/equipment`);
+
+        if (!response.ok) {
+            throw new Error("Failed to load equipment");
+        }
+
+        equipmentData = await response.json();
+
+        renderEquipment(equipmentData);
+
+    } catch (error) {
+
+        console.error("Equipment loading error:", error);
+
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="8">
+                    Unable to load equipment.
+                </td>
+            </tr>
+        `;
+    }
+}
+
+
+// ==========================================================
+// RENDER EQUIPMENT
+// ==========================================================
+
+function renderEquipment(equipmentList) {
+
+    const tableBody =
+        document.getElementById("equipmentTableBody");
+
+    if (!equipmentList || equipmentList.length === 0) {
+
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="8">
+                    No equipment found.
+                </td>
+            </tr>
+        `;
+
+        return;
+    }
+
+    tableBody.innerHTML = equipmentList.map(item => `
+
+        <tr>
+
+            <td>${escapeHtml(item.equipment_id || "")}</td>
+
+            <td>${escapeHtml(item.name || "")}</td>
+
+            <td>${escapeHtml(item.category || "")}</td>
+
+            <td>${escapeHtml(item.manufacturer || "-")}</td>
+
+            <td>${escapeHtml(item.model || "-")}</td>
+
+            <td>${escapeHtml(item.location || "")}</td>
+
+            <td>${escapeHtml(item.status || "")}</td>
+
+            <td>
+
+                <button
+                    class="action-btn edit-btn"
+                    onclick="editEquipment('${escapeJs(item.equipment_id)}')"
+                >
+                    Edit
+                </button>
+
+                <button
+                    class="action-btn delete-btn"
+                    onclick="deleteEquipment('${escapeJs(item.equipment_id)}')"
+                >
+                    Delete
+                </button>
+
+            </td>
+
+        </tr>
+
+    `).join("");
+}
+
+
+// ==========================================================
+// OPEN FORM
+// ==========================================================
+
+function openEquipmentForm() {
+
+    document.getElementById("equipmentModal").style.display = "flex";
+
+    document.getElementById("equipmentModalTitle").textContent =
+        "Add Equipment";
+
+    document.getElementById("equipmentForm").reset();
+
+    document.getElementById("editEquipmentId").value = "";
+
+}
+
+
+// ==========================================================
+// CLOSE FORM
+// ==========================================================
+
+function closeEquipmentForm() {
+
+    document.getElementById("equipmentModal").style.display = "none";
+
+}
+
+
+// ==========================================================
+// ADD / UPDATE EQUIPMENT
+// ==========================================================
+
+document
+    .getElementById("equipmentForm")
+    .addEventListener("submit", async function(event) {
+
+        event.preventDefault();
+
+        const editId =
+            document.getElementById("editEquipmentId").value;
+
+        const equipment = {
+
+            equipment_id: editId ||
+                generateEquipmentId(),
+
+            name:
+                document.getElementById("equipmentName").value.trim(),
+
+            category:
+                document.getElementById("equipmentCategory").value.trim(),
+
+            manufacturer:
+                document.getElementById("equipmentManufacturer").value.trim(),
+
+            model:
+                document.getElementById("equipmentModel").value.trim(),
+
+            serial_number:
+                document.getElementById("equipmentSerialNumber").value.trim(),
+
+            location:
+                document.getElementById("equipmentLocation").value.trim(),
+
+            installation_date:
+                document.getElementById("equipmentInstallationDate").value,
+
+            status:
+                document.getElementById("equipmentStatus").value
+
+        };
+
+
+        try {
+
+            let response;
+
+            if (editId) {
+
+                // UPDATE
+                response = await fetch(
+                    `${API_URL}/equipment/${encodeURIComponent(editId)}`,
+                    {
+                        method: "PUT",
+
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+
+                        body: JSON.stringify(equipment)
+                    }
+                );
+
+            } else {
+
+                // CREATE
+                response = await fetch(
+                    `${API_URL}/equipment`,
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+
+                        body: JSON.stringify(equipment)
+                    }
+                );
+            }
+
+
+            if (!response.ok) {
+
+                const errorText = await response.text();
+
+                throw new Error(errorText);
+            }
+
+
+            document.getElementById("equipmentMessage").textContent =
+                editId
+                    ? "Equipment updated successfully."
+                    : "Equipment added successfully.";
+
+            closeEquipmentForm();
+
+            await loadEquipment();
+
+        } catch (error) {
+
+            console.error("Equipment save error:", error);
+
+            document.getElementById("equipmentMessage").textContent =
+                "Failed to save equipment.";
+        }
+
+    });
+
+
+// ==========================================================
+// EDIT EQUIPMENT
+// ==========================================================
+
+function editEquipment(equipmentId) {
+
+    const equipment = equipmentData.find(
+        item => item.equipment_id === equipmentId
+    );
+
+    if (!equipment) {
+        alert("Equipment not found.");
+        return;
+    }
+
+
+    document.getElementById("equipmentModalTitle").textContent =
+        "Edit Equipment";
+
+
+    document.getElementById("editEquipmentId").value =
+        equipment.equipment_id || "";
+
+    document.getElementById("equipmentName").value =
+        equipment.name || "";
+
+    document.getElementById("equipmentCategory").value =
+        equipment.category || "";
+
+    document.getElementById("equipmentManufacturer").value =
+        equipment.manufacturer || "";
+
+    document.getElementById("equipmentModel").value =
+        equipment.model || "";
+
+    document.getElementById("equipmentSerialNumber").value =
+        equipment.serial_number || "";
+
+    document.getElementById("equipmentLocation").value =
+        equipment.location || "";
+
+    document.getElementById("equipmentInstallationDate").value =
+        equipment.installation_date || "";
+
+    document.getElementById("equipmentStatus").value =
+        equipment.status || "Active";
+
+
+    document.getElementById("equipmentModal").style.display =
+        "flex";
+}
+
+
+// ==========================================================
+// DELETE EQUIPMENT
+// ==========================================================
+
+async function deleteEquipment(equipmentId) {
+
+    const confirmed = confirm(
+        "Are you sure you want to delete this equipment?"
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+
+    try {
+
+        const response = await fetch(
+            `${API_URL}/equipment/${encodeURIComponent(equipmentId)}`,
+            {
+                method: "DELETE"
+            }
+        );
+
+
+        if (!response.ok) {
+
+            const errorText = await response.text();
+
+            throw new Error(errorText);
+        }
+
+
+        await loadEquipment();
+
+        alert("Equipment deleted successfully.");
+
+    } catch (error) {
+
+        console.error("Delete error:", error);
+
+        alert("Failed to delete equipment.");
+    }
+}
+
+
+// ==========================================================
+// SEARCH EQUIPMENT
+// ==========================================================
+
+function searchEquipment() {
+
+    const searchValue =
+        document.getElementById("equipmentSearch")
+            .value
+            .toLowerCase()
+            .trim();
+
+
+    const filtered = equipmentData.filter(item => {
+
+        return (
+
+            (item.equipment_id || "")
+                .toLowerCase()
+                .includes(searchValue)
+
+            ||
+
+            (item.name || "")
+                .toLowerCase()
+                .includes(searchValue)
+
+            ||
+
+            (item.category || "")
+                .toLowerCase()
+                .includes(searchValue)
+
+            ||
+
+            (item.manufacturer || "")
+                .toLowerCase()
+                .includes(searchValue)
+
+            ||
+
+            (item.location || "")
+                .toLowerCase()
+                .includes(searchValue)
+
+        );
+
+    });
+
+
+    renderEquipment(filtered);
+}
+
+
+// ==========================================================
+// FILTER BY STATUS
+// ==========================================================
+
+function filterEquipment() {
+
+    const status =
+        document.getElementById("equipmentStatusFilter").value;
+
+
+    if (!status) {
+
+        renderEquipment(equipmentData);
+
+        return;
+    }
+
+
+    const filtered =
+        equipmentData.filter(
+            item => item.status === status
+        );
+
+
+    renderEquipment(filtered);
+}
+
+
+// ==========================================================
+// GENERATE EQUIPMENT ID
+// ==========================================================
+
+function generateEquipmentId() {
+
+    return "EQ-" +
+        Date.now().toString().slice(-8);
+}
+
+
+// ==========================================================
+// HTML SAFETY
+// ==========================================================
+
+function escapeHtml(value) {
+
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+
+function escapeJs(value) {
+
+    return String(value)
+        .replace(/\\/g, "\\\\")
+        .replace(/'/g, "\\'");
+}
+
+
+// ==========================================================
+// INITIAL LOAD
+// ==========================================================
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function() {
+
+        loadEquipment();
+
+    }
+);
+
+// ==========================================================
 // MAINTENANCE ALERT — VIEW EQUIPMENT
 // ==========================================================
 
@@ -295,286 +1564,27 @@ function viewMaintenanceEquipment(equipmentId) {
 }
 
 // ==========================================================
-// REGISTER EQUIPMENT
-// ==========================================================
-
-async function registerEquipment() {
-
-    const equipment = {
-
-        equipment_id:
-            document.getElementById("equipment-id").value.trim(),
-
-        name:
-            document.getElementById("equipment-name").value.trim(),
-
-        category:
-            document.getElementById("equipment-category").value.trim(),
-
-        location:
-            document.getElementById("equipment-location").value.trim(),
-
-        manufacturer:
-            document.getElementById("equipment-manufacturer").value.trim(),
-
-        model:
-            document.getElementById("equipment-model").value.trim(),
-
-        serial_number:
-            document.getElementById("equipment-serial").value.trim(),
-
-        installation_date:
-            document.getElementById("equipment-date").value.trim()
-    };
-
-
-    if (!equipment.equipment_id) {
-        showMessage("Please enter an Equipment ID.");
-        return;
-    }
-
-
-    if (!equipment.name) {
-        showMessage("Please enter an Equipment Name.");
-        return;
-    }
-
-
-    if (!equipment.category) {
-        showMessage("Please enter an Equipment Category.");
-        return;
-    }
-
-
-    if (!equipment.location) {
-        showMessage("Please enter the Equipment Location.");
-        return;
-    }
-
-
-    try {
-
-        const response = await fetch(
-            `${API_URL}/equipment`,
-            {
-                method: "POST",
-
-                headers: {
-                    "Content-Type": "application/json"
-                },
-
-                body: JSON.stringify(equipment)
-            }
-        );
-
-
-        const data = await response.json();
-
-
-        if (!response.ok) {
-
-            throw new Error(
-                data.detail ||
-                "Equipment registration failed."
-            );
-        }
-
-
-        showMessage(
-            "Equipment registered successfully."
-        );
-
-
-        document.getElementById("equipment-id").value = "";
-        document.getElementById("equipment-name").value = "";
-        document.getElementById("equipment-category").value = "";
-        document.getElementById("equipment-location").value = "";
-        document.getElementById("equipment-manufacturer").value = "";
-        document.getElementById("equipment-model").value = "";
-        document.getElementById("equipment-serial").value = "";
-        document.getElementById("equipment-date").value = "";
-
-
-        await loadEquipment();
-        await loadDashboard();
-
-    }
-
-    catch (error) {
-
-        console.error(
-            "Equipment registration error:",
-            error
-        );
-
-        showMessage(
-            "Registration error: " +
-            error.message
-        );
-    }
-}
-
-// ==========================================================
-// EQUIPMENT SELECTOR — v3.2
-// ==========================================================
-
-async function loadEquipment() {
-
-    try {
-
-        const response = await fetch(
-            `${API_URL}/equipment`
-        );
-
-        if (!response.ok) {
-
-            throw new Error(
-                `Equipment request failed: ${response.status}`
-            );
-
-        }
-
-        const equipment =
-            await response.json();
-
-        console.log(
-            "Equipment loaded for selector:",
-            equipment
-        );
-
-        const selector =
-            document.getElementById(
-                "equipment-select"
-            );
-
-        if (!selector) {
-
-            console.error(
-                "Equipment selector not found."
-            );
-
-            return;
-        }
-
-        // Clear existing options
-
-        selector.innerHTML =
-            `<option value="">Select Equipment</option>`;
-
-        // Add equipment to dropdown
-
-        equipment.forEach(item => {
-
-            const option =
-                document.createElement("option");
-
-            option.value =
-                item.equipment_id;
-
-            option.textContent =
-                `${item.equipment_id} — ${item.name}`;
-
-            selector.appendChild(option);
-
-        });
-
-        console.log(
-            "Equipment selector populated successfully."
-        );
-
-        // Listen for equipment selection
-
-        selector.addEventListener(
-            "change",
-            () => {
-
-                const equipmentId =
-                    selector.value;
-
-                if (!equipmentId) {
-                    return;
-                }
-
-                loadEquipmentHealth(
-                    equipmentId
-                );
-
-            }
-        );
-
-    } catch (error) {
-
-        console.error(
-            "Equipment loading error:",
-            error
-        );
-
-    }
-
-}
-
-// ==========================================================
 // EQUIPMENT HEALTH — v3.2.1
 // ==========================================================
 
 async function loadEquipmentHealth() {
 
-    try {
-
-        // Get registered equipment
-        const equipmentResponse = await fetch(
-            `${API_URL}/equipment`
+    const selector =
+        document.getElementById(
+            "equipment-health-select"
         );
 
-        if (!equipmentResponse.ok) {
-            throw new Error(
-                `Equipment request failed: ${equipmentResponse.status}`
-            );
-        }
+    if (!selector) {
+        return;
+    }
 
-        const equipment =
-            await equipmentResponse.json();
 
-        const selector =
-            document.getElementById(
-                "equipment-health-select"
-            );
-
-        if (!selector) {
-            console.error(
-                "Equipment health selector not found."
-            );
-            return;
-        }
-
-        // Clear existing options
-        selector.innerHTML = `
-            <option value="">
-                Select Equipment
-            </option>
-        `;
-
-        // Add equipment to dropdown
-        equipment.forEach(item => {
-
-            const option =
-                document.createElement("option");
-
-            option.value =
-                item.equipment_id;
-
-            option.textContent =
-                `${item.equipment_id} — ${item.name}`;
-
-            selector.appendChild(option);
-
-        });
-
-        // Listen for equipment selection
-        selector.onchange = async function () {
+    selector.onchange =
+        async function() {
 
             const equipmentId =
                 this.value;
+
 
             const healthElement =
                 document.getElementById(
@@ -586,11 +1596,12 @@ async function loadEquipmentHealth() {
                     "equipment-health-status"
                 );
 
-            // Nothing selected
+
             if (!equipmentId) {
 
                 if (healthElement) {
-                    healthElement.textContent = "--";
+                    healthElement.textContent =
+                        "--";
                 }
 
                 if (statusElement) {
@@ -601,45 +1612,46 @@ async function loadEquipmentHealth() {
                 return;
             }
 
+
             try {
 
-                // Request health information
-                const healthResponse =
+                const response =
                     await fetch(
-                        `${API_URL}/equipment/${equipmentId}/health`
+                        `${API_URL}/equipment/${encodeURIComponent(
+                            equipmentId
+                        )}/health`
                     );
 
-                if (!healthResponse.ok) {
+
+                const data =
+                    await response.json();
+
+
+                if (!response.ok) {
 
                     throw new Error(
-                        `Health request failed: ${healthResponse.status}`
+                        data.detail ||
+                        "Health request failed."
                     );
 
                 }
 
-                const health =
-                    await healthResponse.json();
 
-                console.log(
-                    "Equipment health:",
-                    health
-                );
-
-                // Display health score
                 if (healthElement) {
 
                     healthElement.textContent =
-                        `${health.health_score}%`;
+                        `${data.health_score}%`;
 
                 }
 
-                // Display health status
+
                 if (statusElement) {
 
                     statusElement.textContent =
-                        `${health.status} — ${health.equipment_id}`;
+                        `${data.status} — ${data.equipment_id}`;
 
                 }
+
 
             } catch (error) {
 
@@ -648,9 +1660,12 @@ async function loadEquipmentHealth() {
                     error
                 );
 
+
                 if (healthElement) {
-                    healthElement.textContent = "--";
+                    healthElement.textContent =
+                        "--";
                 }
+
 
                 if (statusElement) {
                     statusElement.textContent =
@@ -660,15 +1675,6 @@ async function loadEquipmentHealth() {
             }
 
         };
-
-    } catch (error) {
-
-        console.error(
-            "Equipment health loading error:",
-            error
-        );
-
-    }
 
 }
 
@@ -730,46 +1736,54 @@ async function loadDiagnosisEquipment() {
 
 }
 
+// ==========================================================
+// AI DIAGNOSIS — v3.4.3
+// ==========================================================
 
 async function runDiagnosis() {
 
-    const equipmentSelect =
-        document.getElementById("diagnosis-equipment");
+    const equipment =
+        document.getElementById("diagnosis-equipment").value;
 
-    const faultSelect =
-        document.getElementById("diagnosis-fault");
+    const fault =
+        document.getElementById("diagnosis-fault").value;
 
     const result =
         document.getElementById("diagnosis-result");
 
-    const equipment =
-        equipmentSelect.value;
 
-    const fault =
-        faultSelect.value;
+    // ------------------------------------------------------
+    // VALIDATION
+    // ------------------------------------------------------
 
     if (!equipment || !fault) {
 
         result.innerHTML = `
-            <div class="diagnosis-card">
-                <h3>🤖 Diagnosis</h3>
-                <p>
-                    Please select both equipment and a fault.
-                </p>
+            <div class="alert alert-warning">
+                ⚠️ Please select equipment and a fault.
             </div>
         `;
 
         return;
     }
 
+
+    // ------------------------------------------------------
+    // SHOW LOADING
+    // ------------------------------------------------------
+
     result.innerHTML = `
-        <div class="diagnosis-card">
-            <h3>🔄 FuElectric-AI is analysing...</h3>
-            <p>Please wait.</p>
+        <div class="alert alert-info">
+            🔄 FuElectric-AI is analyzing the equipment...
         </div>
     `;
 
+
     try {
+
+        // --------------------------------------------------
+        // SEND REQUEST TO FASTAPI
+        // --------------------------------------------------
 
         const response = await fetch(
             `${API_URL}/diagnose`,
@@ -787,7 +1801,13 @@ async function runDiagnosis() {
             }
         );
 
+
         const data = await response.json();
+
+
+        // --------------------------------------------------
+        // HANDLE API ERROR
+        // --------------------------------------------------
 
         if (!response.ok) {
 
@@ -795,192 +1815,110 @@ async function runDiagnosis() {
                 data.detail ||
                 "Diagnosis failed."
             );
+
         }
 
-        const causes =
-            data.causes || [];
 
-        const recommendations =
-            data.recommendations || [];
+        // --------------------------------------------------
+       // DISPLAY REAL FU-ELECTRIC-AI RESPONSE
+      // --------------------------------------------------
 
-        const tools =
-            data.tools || [];
+result.innerHTML = `
 
-        const spareParts =
-            data.spare_parts || [];
+    <div class="diagnosis-success">
 
-        const safety =
-            data.safety_precautions || [];
+        <h3>
+            🤖 FuElectric-AI Diagnosis
+        </h3>
 
-        const preventive =
-            data.preventive_maintenance || [];
+        <p>
+            <strong>Equipment ID:</strong>
+            ${data.equipment_id}
+        </p>
 
-        const emergencyMessage =
-            data.is_emergency
-                ? `
-                    <div class="diagnosis-emergency">
-                        🚨 EMERGENCY WARNING<br>
-                        This fault requires immediate attention.
-                        Stop using the equipment and contact a
-                        qualified technician.
-                    </div>
-                `
-                : `
-                    <div class="diagnosis-normal">
-                        ✅ No emergency condition identified
-                        in the diagnostic knowledge base.
-                    </div>
-                `;
+        <p>
+            <strong>Equipment:</strong>
+            ${data.equipment_name}
+        </p>
 
-        result.innerHTML = `
+        <p>
+            <strong>Reported Fault:</strong>
+            ${data.fault}
+        </p>
 
-            <div class="diagnosis-card">
+        <p>
+            <strong>Fault ID:</strong>
+            ${data.id}
+        </p>
 
-                <h3>
-                    🤖 FuElectric-AI Diagnosis Result
-                </h3>
+        <p>
+            <strong>Category:</strong>
+            ${data.category}
+        </p>
 
-                <div class="diagnosis-equipment">
+        <p>
+            <strong>Severity:</strong>
+            ${data.severity}
+        </p>
 
-                    <strong>Equipment:</strong>
-                    ${data.equipment_name}
+        <p>
+            <strong>Risk Level:</strong>
+            ${data.risk_level}
+        </p>
 
-                    <br>
-
-                    <strong>Equipment ID:</strong>
-                    ${data.equipment_id}
-
-                    <br>
-
-                    <strong>Fault:</strong>
-                    ${data.fault}
-
-                </div>
+        <p>
+            <strong>Emergency:</strong>
+            ${data.is_emergency ? "🚨 Yes" : "✅ No"}
+        </p>
 
 
-                <div class="diagnosis-summary">
+        <h4>🔎 Possible Causes</h4>
 
-                    <div>
-                        <strong>Category</strong>
-                        <br>
-                        ${data.category}
-                    </div>
-
-                    <div>
-                        <strong>Severity</strong>
-                        <br>
-                        ${data.severity}/5
-                    </div>
-
-                    <div>
-                        <strong>Risk Level</strong>
-                        <br>
-                        ${data.risk_level}
-                    </div>
-
-                    <div>
-                        <strong>Emergency</strong>
-                        <br>
-                        ${data.is_emergency ? "YES" : "NO"}
-                    </div>
-
-                    <div>
-                        <strong>Repair Time</strong>
-                        <br>
-                        ${data.repair_time}
-                    </div>
-
-                    <div>
-                        <strong>Skill Level</strong>
-                        <br>
-                        ${data.skill_level}
-                    </div>
-
-                </div>
+        <ul>
+            ${
+                Array.isArray(data.causes)
+                    ? data.causes
+                        .map(cause => `<li>${cause}</li>`)
+                        .join("")
+                    : "<li>No causes provided.</li>"
+            }
+        </ul>
 
 
-                <h4 class="diagnosis-section-title">
-                    🔍 Possible Causes
-                </h4>
+        <h4>🛠️ Recommendations</h4>
 
-                <ul>
-                    ${
-                        causes.map(
-                            item => `<li>${item}</li>`
-                        ).join("")
-                    }
-                </ul>
-
-
-                <h4 class="diagnosis-section-title">
-                    🛠️ Recommendations
-                </h4>
-
-                <ul>
-                    ${
-                        recommendations.map(
-                            item => `<li>${item}</li>`
-                        ).join("")
-                    }
-                </ul>
+        <ul>
+            ${
+                Array.isArray(data.recommendations)
+                    ? data.recommendations
+                        .map(item => `<li>${item}</li>`)
+                        .join("")
+                    : "<li>No recommendations provided.</li>"
+            }
+        </ul>
 
 
-                <h4 class="diagnosis-section-title">
-                    🔧 Required Tools
-                </h4>
-
-                <ul>
-                    ${
-                        tools.map(
-                            item => `<li>${item}</li>`
-                        ).join("")
-                    }
-                </ul>
+        <p>
+            <strong>Estimated Repair Time:</strong>
+            ${data.repair_time || "Not provided"}
+        </p>
 
 
-                <h4 class="diagnosis-section-title">
-                    🔩 Spare Parts
-                </h4>
+        <h4>🔧 Required Tools</h4>
 
-                <ul>
-                    ${
-                        spareParts.map(
-                            item => `<li>${item}</li>`
-                        ).join("")
-                    }
-                </ul>
+        <ul>
+            ${
+                Array.isArray(data.tools)
+                    ? data.tools
+                        .map(tool => `<li>${tool}</li>`)
+                        .join("")
+                    : "<li>No tools listed.</li>"
+            }
+            </ul>
 
+    </div>
 
-                <h4 class="diagnosis-section-title">
-                    🦺 Safety Precautions
-                </h4>
-
-                <ul>
-                    ${
-                        safety.map(
-                            item => `<li>${item}</li>`
-                        ).join("")
-                    }
-                </ul>
-
-
-                <h4 class="diagnosis-section-title">
-                    🔄 Preventive Maintenance
-                </h4>
-
-                <ul>
-                    ${
-                        preventive.map(
-                            item => `<li>${item}</li>`
-                        ).join("")
-                    }
-                </ul>
-
-
-                ${emergencyMessage}
-
-            </div>
-        `;
+`;
 
     } catch (error) {
 
@@ -990,19 +1928,15 @@ async function runDiagnosis() {
         );
 
         result.innerHTML = `
-            <div class="diagnosis-card">
-
-                <h3>❌ Diagnosis Error</h3>
-
-                <p>
-                    ${error.message}
-                </p>
-
+            <div class="alert alert-danger">
+                ❌ Diagnosis failed:
+                ${escapeHtml(error.message)}
             </div>
         `;
-    }
-}
 
+    }
+
+}
 
 // ==========================================================
 // WORK ORDER MANAGEMENT
@@ -1194,31 +2128,28 @@ async function createWorkOrder() {
 }
 
 
-// ----------------------------------------------------------
-// LOAD WORK ORDERS
-// ----------------------------------------------------------
+// ==========================================================
+// LOAD WORK ORDERS — v3.4.2
+// ==========================================================
 
 async function loadWorkOrders() {
 
     try {
 
-        const response =
-            await fetch(
-                `${API_URL}/work-orders`
-            );
-
+        const response = await fetch(
+            `${API_URL}/work-orders`
+        );
 
         if (!response.ok) {
 
             throw new Error(
                 `Work Order request failed: ${response.status}`
             );
-        }
 
+        }
 
         const workOrders =
             await response.json();
-
 
         console.log(
             "Work Orders:",
@@ -1257,7 +2188,6 @@ async function loadWorkOrders() {
             const card =
                 document.createElement("div");
 
-
             card.className =
                 "work-order-item";
 
@@ -1289,11 +2219,6 @@ async function loadWorkOrders() {
                 </p>
 
                 <p>
-                    <strong>Status:</strong>
-                    ${order.status ?? "N/A"}
-                </p>
-
-                <p>
                     <strong>Description:</strong>
                     ${order.description ?? "N/A"}
                 </p>
@@ -1309,9 +2234,70 @@ async function loadWorkOrders() {
                 </p>
 
                 <p>
-                    <strong>Created:</strong>
-                    ${order.created_at ?? "N/A"}
+                    <strong>Completed:</strong>
+                    ${order.completed_date ?? "Not completed"}
                 </p>
+
+
+                <!-- STATUS -->
+
+                <div class="work-order-status-control">
+
+                    <strong>Status:</strong>
+
+                    <select
+                        onchange="updateWorkOrderStatus(
+                            '${escapeJs(order.work_order_id)}',
+                            this.value
+                        )"
+                    >
+
+                        <option
+                            value="Open"
+                            ${order.status === "Open" ? "selected" : ""}
+                        >
+                            Open
+                        </option>
+
+                        <option
+                            value="In Progress"
+                            ${order.status === "In Progress" ? "selected" : ""}
+                        >
+                            In Progress
+                        </option>
+
+                        <option
+                            value="Completed"
+                            ${order.status === "Completed" ? "selected" : ""}
+                        >
+                            Completed
+                        </option>
+
+                        <option
+                            value="Cancelled"
+                            ${order.status === "Cancelled" ? "selected" : ""}
+                        >
+                            Cancelled
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <!-- ACTIONS -->
+
+                <div class="work-order-actions">
+
+                    <button
+                        onclick="deleteWorkOrder(
+                            '${escapeJs(order.work_order_id)}'
+                        )"
+                    >
+                        🗑️ Delete
+                    </button>
+
+                </div>
 
             `;
 
@@ -1332,7 +2318,165 @@ async function loadWorkOrders() {
         showMessage(
             "Could not load Work Orders."
         );
+
     }
+
+}
+
+// ==========================================================
+// UPDATE WORK ORDER STATUS — v3.4.2
+// ==========================================================
+
+async function updateWorkOrderStatus(
+    workOrderId,
+    status
+) {
+
+    try {
+
+        const response = await fetch(
+            `${API_URL}/work-orders/${encodeURIComponent(
+                workOrderId
+            )}/status`,
+            {
+                method: "PUT",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body: JSON.stringify({
+                    status: status
+                })
+            }
+        );
+
+
+        const data =
+            await response.json();
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.detail ||
+                "Status update failed."
+            );
+
+        }
+
+
+        console.log(
+            "Work Order status updated:",
+            data
+        );
+
+
+        showMessage(
+            `Work Order ${workOrderId} is now ${status}.`
+        );
+
+
+        await loadWorkOrders();
+
+        await loadWorkOrderStatistics();
+
+        await loadDashboard();
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Status update error:",
+            error
+        );
+
+        showMessage(
+            "Status update error: " +
+            error.message
+        );
+
+        await loadWorkOrders();
+
+    }
+
+}
+
+// ==========================================================
+// DELETE WORK ORDER — v3.4.2
+// ==========================================================
+
+async function deleteWorkOrder(
+    workOrderId
+) {
+
+    const confirmed =
+        confirm(
+            `Delete Work Order ${workOrderId}?`
+        );
+
+
+    if (!confirmed) {
+        return;
+    }
+
+
+    try {
+
+        const response =
+            await fetch(
+                `${API_URL}/work-orders/${encodeURIComponent(
+                    workOrderId
+                )}`,
+                {
+                    method: "DELETE"
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.detail ||
+                "Work Order deletion failed."
+            );
+
+        }
+
+
+        showMessage(
+            `Work Order ${workOrderId} deleted successfully.`
+        );
+
+
+        await loadWorkOrders();
+
+        await loadWorkOrderStatistics();
+
+        await loadDashboard();
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Work Order deletion error:",
+            error
+        );
+
+        showMessage(
+            "Delete error: " +
+            error.message
+        );
+
+    }
+
 }
 
 

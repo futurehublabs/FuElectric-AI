@@ -235,102 +235,295 @@
 
     </section>
 
+<!-- =================================================
+     EQUIPMENT MANAGEMENT
+     ================================================= -->    
+<!-- ==================================================
+     EQUIPMENT MANAGEMENT — v3.4.1
+     ================================================== -->
 
-    <!-- ==================================================
-         EQUIPMENT MANAGEMENT
-         ================================================== -->
+<section class="equipment-section">
 
-    <section class="equipment-section">
+    <!-- HEADER -->
+    <div class="section-header">
 
-        <h2>
-            ⚙️ Equipment Management
-        </h2>
-
-
-        <div class="equipment-form">
-
-            <input
-                type="text"
-                id="equipment-id"
-                placeholder="Equipment ID"
-            >
-
-            <input
-                type="text"
-                id="equipment-name"
-                placeholder="Equipment Name"
-            >
-
-            <input
-                type="text"
-                id="equipment-category"
-                placeholder="Category"
-            >
-
-            <input
-                type="text"
-                id="equipment-location"
-                placeholder="Location"
-            >
-
-            <input
-                type="text"
-                id="equipment-manufacturer"
-                placeholder="Manufacturer"
-            >
-
-            <input
-                type="text"
-                id="equipment-model"
-                placeholder="Model"
-            >
-
-            <input
-                type="text"
-                id="equipment-serial"
-                placeholder="Serial Number"
-            >
-
-            <input
-                type="text"
-                id="equipment-date"
-                placeholder="Installation Date"
-            >
-
-
-            <button onclick="registerEquipment()">
-                ➕ Register Equipment
-            </button>
-
-        </div>
-
-
-        <hr>
-
-
-        <h3>
-            📋 Equipment List
-        </h3>
-
-
-        <button onclick="loadEquipment()">
-            🔄 Refresh Equipment
-        </button>
-
-
-        <div id="equipment-list">
+        <div>
+            <h2>
+                ⚙️ Equipment Management
+            </h2>
 
             <p>
-                No equipment loaded.
+                Register, monitor, search and manage all equipment.
             </p>
+        </div>
+
+        <button
+            class="primary-btn"
+            onclick="openEquipmentForm()"
+        >
+            ➕ Add Equipment
+        </button>
+
+    </div>
+
+
+    <!-- SEARCH AND FILTER -->
+    <div class="equipment-tools">
+
+        <input
+            type="text"
+            id="equipmentSearch"
+            placeholder="🔎 Search equipment..."
+            oninput="searchEquipment()"
+        >
+
+        <select
+            id="equipmentStatusFilter"
+            onchange="filterEquipment()"
+        >
+
+            <option value="">
+                All Status
+            </option>
+
+            <option value="Active">
+                Active
+            </option>
+
+            <option value="Inactive">
+                Inactive
+            </option>
+
+            <option value="Maintenance">
+                Maintenance
+            </option>
+
+        </select>
+
+    </div>
+
+
+    <hr>
+
+
+    <!-- EQUIPMENT LIST -->
+    <h3>
+        📋 Registered Equipment
+    </h3>
+
+
+    <button
+        class="secondary-btn"
+        onclick="loadEquipment()"
+    >
+        🔄 Refresh Equipment
+    </button>
+
+
+    <div class="table-container">
+
+        <table id="equipmentTable">
+
+            <thead>
+
+                <tr>
+
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>Manufacturer</th>
+                    <th>Model</th>
+                    <th>Location</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+
+                </tr>
+
+            </thead>
+
+
+            <tbody id="equipmentTableBody">
+
+                <tr>
+
+                    <td colspan="8">
+                        Loading equipment...
+                    </td>
+
+                </tr>
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+
+    <!-- ==================================================
+         ADD / EDIT EQUIPMENT MODAL
+         ================================================== -->
+
+    <div
+        id="equipmentModal"
+        class="modal"
+    >
+
+        <div class="modal-content">
+
+            <span
+                class="close-btn"
+                onclick="closeEquipmentForm()"
+            >
+                &times;
+            </span>
+
+
+            <h2 id="equipmentModalTitle">
+                Add Equipment
+            </h2>
+
+
+            <form id="equipmentForm">
+
+                <!-- Hidden ID used during editing -->
+                <input
+                    type="hidden"
+                    id="editEquipmentId"
+                >
+
+
+                <!-- EQUIPMENT NAME -->
+                <label for="equipmentName">
+                    Equipment Name
+                </label>
+
+                <input
+                    type="text"
+                    id="equipmentName"
+                    placeholder="e.g. Cement Mill"
+                    required
+                >
+
+
+                <!-- CATEGORY -->
+                <label for="equipmentCategory">
+                    Category
+                </label>
+
+                <input
+                    type="text"
+                    id="equipmentCategory"
+                    placeholder="e.g. Electrical"
+                    required
+                >
+
+
+                <!-- MANUFACTURER -->
+                <label for="equipmentManufacturer">
+                    Manufacturer
+                </label>
+
+                <input
+                    type="text"
+                    id="equipmentManufacturer"
+                    placeholder="e.g. Siemens"
+                >
+
+
+                <!-- MODEL -->
+                <label for="equipmentModel">
+                    Model
+                </label>
+
+                <input
+                    type="text"
+                    id="equipmentModel"
+                    placeholder="e.g. S7-1500"
+                >
+
+
+                <!-- SERIAL NUMBER -->
+                <label for="equipmentSerialNumber">
+                    Serial Number
+                </label>
+
+                <input
+                    type="text"
+                    id="equipmentSerialNumber"
+                    placeholder="Enter serial number"
+                >
+
+
+                <!-- LOCATION -->
+                <label for="equipmentLocation">
+                    Location
+                </label>
+
+                <input
+                    type="text"
+                    id="equipmentLocation"
+                    placeholder="e.g. Production Line 1"
+                    required
+                >
+
+
+                <!-- INSTALLATION DATE -->
+                <label for="equipmentInstallationDate">
+                    Installation Date
+                </label>
+
+                <input
+                    type="date"
+                    id="equipmentInstallationDate"
+                >
+
+
+                <!-- STATUS -->
+                <label for="equipmentStatus">
+                    Status
+                </label>
+
+                <select id="equipmentStatus">
+
+                    <option value="Active">
+                        Active
+                    </option>
+
+                    <option value="Inactive">
+                        Inactive
+                    </option>
+
+                    <option value="Maintenance">
+                        Maintenance
+                    </option>
+
+                </select>
+
+
+                <!-- SAVE -->
+                <button
+                    type="submit"
+                    class="primary-btn"
+                >
+                    💾 Save Equipment
+                </button>
+
+            </form>
+
+
+            <p
+                id="equipmentMessage"
+                class="equipment-message"
+            ></p>
 
         </div>
 
-    </section>
+    </div>
 
+</section>
 
 <!-- ==================================================
-     AI DIAGNOSIS
+     AI EQUIPMENT DIAGNOSIS — v3.4.3
      ================================================== -->
 
 <section class="diagnosis-section">
@@ -353,6 +546,7 @@
         </select>
 
         <select id="diagnosis-fault">
+
             <option value="">
                 Select Fault / Symptom
             </option>
@@ -405,7 +599,10 @@
 
     </div>
 
-    <div id="diagnosis-result" class="diagnosis-result">
+    <div
+        id="diagnosis-result"
+        class="diagnosis-result"
+    >
 
         <p>
             Select equipment and a fault to begin diagnosis.

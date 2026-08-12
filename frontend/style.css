@@ -302,3 +302,159 @@ main {
     height: auto;
     overflow: visible;
 }
+
+/* ==========================================================
+   EQUIPMENT MANAGEMENT - v3.4.1
+========================================================== */
+
+.equipment-section {
+    margin-top: 30px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.section-header h2 {
+    margin-bottom: 5px;
+}
+
+.section-header p {
+    margin: 0;
+    opacity: 0.7;
+}
+
+.equipment-tools {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.equipment-tools input,
+.equipment-tools select {
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+
+.equipment-tools input {
+    flex: 1;
+}
+
+.primary-btn {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.table-container {
+    overflow-x: auto;
+}
+
+#equipmentTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#equipmentTable th,
+#equipmentTable td {
+    padding: 12px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+}
+
+.action-btn {
+    border: none;
+    padding: 6px 10px;
+    margin-right: 4px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.edit-btn {
+    background: #ddd;
+}
+
+.delete-btn {
+    background: #ddd;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    width: 90%;
+    max-width: 500px;
+    padding: 25px;
+    border-radius: 10px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.close-btn {
+    float: right;
+    font-size: 28px;
+    cursor: pointer;
+}
+
+.modal-content label {
+    display: block;
+    margin-top: 12px;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.modal-content input,
+.modal-content select {
+    width: 100%;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.modal-content button {
+    margin-top: 20px;
+}
+
+#equipmentMessage {
+    margin-top: 15px;
+}
+
+/* ==========================================================
+   WORK ORDER MANAGEMENT — v3.4.2
+========================================================== */
+
+.work-order-status-control {
+    margin-top: 15px;
+    margin-bottom: 10px;
+}
+
+.work-order-status-control select {
+    margin-left: 8px;
+    padding: 7px 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+
+.work-order-actions {
+    margin-top: 10px;
+}
+
+.work-order-actions button {
+    padding: 8px 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
