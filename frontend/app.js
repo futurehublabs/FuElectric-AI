@@ -1917,7 +1917,21 @@ result.innerHTML = `
             </ul>
 
     </div>
-
+    <button
+    class="primary-btn"
+    onclick="createWorkOrderFromDiagnosis(
+        '${escapeJs(data.equipment_id)}',
+        '${escapeJs(data.id || "")}',
+        '${escapeJs(data.fault || "")}',
+        '${escapeJs(
+            Array.isArray(data.recommendations)
+                ? data.recommendations.join("; ")
+                : ""
+        )}'
+    )"
+>
+    🛠️ Create Work Order
+</button>
 `;
 
     } catch (error) {
@@ -1939,6 +1953,83 @@ result.innerHTML = `
 }
 
 // ==========================================================
+// CREATE WORK ORDER FROM AI DIAGNOSIS — v3.4.0
+// ==========================================================
+
+function createWorkOrderFromDiagnosis(
+    equipmentId,
+    faultId,
+    fault,
+    recommendation
+) {
+
+    const equipmentInput =
+        document.getElementById(
+            "work-order-equipment"
+        );
+
+    const descriptionInput =
+        document.getElementById(
+            "work-order-description"
+        );
+
+    const typeInput =
+        document.getElementById(
+            "work-order-type"
+        );
+
+    const priorityInput =
+        document.getElementById(
+            "work-order-priority"
+        );
+
+    if (!equipmentInput ||
+        !descriptionInput ||
+        !typeInput ||
+        !priorityInput) {
+
+        showMessage(
+            "Work Order form not found."
+        );
+
+        return;
+    }
+
+    // Populate equipment
+    equipmentInput.value = equipmentId;
+
+    // Work type
+    typeInput.value = "Repair";
+
+    // Determine priority from diagnosis
+    priorityInput.value = "Medium";
+
+    // Build description
+    descriptionInput.value =
+        `AI Diagnosis ${faultId || ""}: ${fault || ""}. ` +
+        `Recommended action: ${recommendation || "Inspect equipment."}`;
+
+    // Scroll to Work Order section
+    const workOrderSection =
+        document.querySelector(
+            ".work-order-section"
+        );
+
+    if (workOrderSection) {
+
+        workOrderSection.scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+        });
+
+    }
+
+    showMessage(
+        "AI diagnosis transferred to Work Order."
+    );
+}
+
+// ==========================================================
 // WORK ORDER MANAGEMENT
 // ==========================================================
 
@@ -1954,7 +2045,8 @@ async function createWorkOrder() {
         work_order_id:
             document.getElementById(
                 "work-order-id"
-            ).value.trim(),
+            ).value.trim() ||
+            generateWorkOrderId(),
 
         equipment_id:
             document.getElementById(
@@ -2127,6 +2219,20 @@ async function createWorkOrder() {
     }
 }
 
+// ==========================================================
+// GENERATE WORK ORDER ID — v3.4.0
+// ==========================================================
+
+function generateWorkOrderId() {
+
+    return (
+        "WO-" +
+        Date.now()
+            .toString()
+            .slice(-8)
+    );
+
+}
 
 // ==========================================================
 // LOAD WORK ORDERS — v3.4.2
