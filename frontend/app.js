@@ -1,109 +1,198 @@
 const API_URL = "http://127.0.0.1:8000";
 
+
+// ==========================================================
+// GLOBAL STATE
+// ==========================================================
+
+let equipmentData = [];
+let cameraStream = null;
+let barcodeDetector = null;
+let cameraScanning = false;
+
+
 // ==========================================================
 // MESSAGE
 // ==========================================================
 
 function showMessage(message) {
-    const messageElement = document.getElementById("message");
+
+    const messageElement =
+        document.getElementById("message");
 
     if (messageElement) {
         messageElement.textContent = message;
     }
+
 }
 
 
 // ==========================================================
-// LIVE DASHBOARD
+// HTML SAFETY
+// ==========================================================
+
+function escapeHtml(value) {
+
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+
+}
+
+
+function escapeJs(value) {
+
+    return String(value ?? "")
+        .replace(/\\/g, "\\\\")
+        .replace(/'/g, "\\'");
+
+}
+
+
+// ==========================================================
+// GENERATE EQUIPMENT ID
+// ==========================================================
+
+function generateEquipmentId() {
+
+    return (
+        "EQ-" +
+        Date.now()
+            .toString()
+            .slice(-8)
+    );
+
+}
+
+
+// ==========================================================
+// DASHBOARD
 // ==========================================================
 
 async function loadDashboard() {
 
     try {
 
-        const response = await fetch(`${API_URL}/dashboard`);
+        const response =
+            await fetch(`${API_URL}/dashboard`);
 
         if (!response.ok) {
+
             throw new Error(
                 `Dashboard request failed: ${response.status}`
             );
+
         }
 
-        const data = await response.json();
+        const data =
+            await response.json();
 
-        console.log("Dashboard data:", data);
+        console.log(
+            "Dashboard data:",
+            data
+        );
 
 
         const equipmentCount =
-            document.getElementById("equipment-count");
+            document.getElementById(
+                "equipment-count"
+            );
 
         if (equipmentCount) {
+
             equipmentCount.textContent =
                 data.total_equipment ?? 0;
+
         }
 
 
         const activeEquipment =
-            document.getElementById("active-equipment");
+            document.getElementById(
+                "active-equipment"
+            );
 
         if (activeEquipment) {
+
             activeEquipment.textContent =
                 data.active_equipment ?? 0;
+
         }
 
 
         const maintenanceCount =
-            document.getElementById("maintenance-count");
+            document.getElementById(
+                "maintenance-count"
+            );
 
         if (maintenanceCount) {
+
             maintenanceCount.textContent =
                 data.maintenance_records ?? 0;
+
         }
 
 
         const technicianCount =
-            document.getElementById("technician-count");
+            document.getElementById(
+                "technician-count"
+            );
 
         if (technicianCount) {
+
             technicianCount.textContent =
                 data.technicians ?? 0;
+
         }
 
 
         const pendingRepairs =
-            document.getElementById("pending-repairs");
+            document.getElementById(
+                "pending-repairs"
+            );
 
         if (pendingRepairs) {
+
             pendingRepairs.textContent =
                 data.pending_repairs ?? 0;
+
         }
 
 
         const completedRepairs =
-            document.getElementById("completed-repairs");
+            document.getElementById(
+                "completed-repairs"
+            );
 
         if (completedRepairs) {
+
             completedRepairs.textContent =
                 data.completed_repairs ?? 0;
+
         }
-
-
-        console.log("Dashboard loaded successfully.");
 
     }
 
     catch (error) {
 
-        console.error("Dashboard error:", error);
+        console.error(
+            "Dashboard error:",
+            error
+        );
 
         showMessage(
             "Could not connect to FuElectric-AI."
         );
+
     }
+
 }
 
+
 // ==========================================================
-// MAINTENANCE INTELLIGENCE — v3.3
+// MAINTENANCE INTELLIGENCE
 // ==========================================================
 
 async function loadMaintenanceAlerts() {
@@ -118,21 +207,17 @@ async function loadMaintenanceAlerts() {
             "maintenance-alert-list"
         );
 
-    // Check that the HTML elements exist
     if (!countElement || !listElement) {
-
-        console.error(
-            "Maintenance alert elements not found."
-        );
-
         return;
     }
 
+
     try {
 
-        const response = await fetch(
-            `${API_URL}/maintenance/alerts`
-        );
+        const response =
+            await fetch(
+                `${API_URL}/maintenance/alerts`
+            );
 
         if (!response.ok) {
 
@@ -142,15 +227,12 @@ async function loadMaintenanceAlerts() {
 
         }
 
-        const data = await response.json();
-
-        console.log(
-            "Maintenance alerts:",
-            data
-        );
+        const data =
+            await response.json();
 
         countElement.textContent =
-            data.total_alerts;
+            data.total_alerts ?? 0;
+
 
         if (
             !data.alerts ||
@@ -166,58 +248,63 @@ async function loadMaintenanceAlerts() {
             return;
         }
 
+
         listElement.innerHTML =
-            data.alerts.map(alert => {
+            data.alerts
+                .map(alert => {
 
-                const maintenanceStatus =
-                    alert.last_maintenance
-                        ? `Last maintenance: ${alert.last_maintenance}`
-                        : "⚠️ No maintenance record";
+                    const maintenanceStatus =
+                        alert.last_maintenance
+                            ? `Last maintenance: ${escapeHtml(alert.last_maintenance)}`
+                            : "⚠️ No maintenance record";
 
-                return `
-                    <div class="maintenance-alert-card">
+                    return `
+                        <div class="maintenance-alert-card">
 
-                        <h3>
-                            ⚠️ ${alert.name}
-                        </h3>
+                            <h3>
+                                ⚠️ ${escapeHtml(alert.name)}
+                            </h3>
 
-                        <p>
-                            <strong>Equipment ID:</strong>
-                            ${alert.equipment_id}
-                        </p>
+                            <p>
+                                <strong>Equipment ID:</strong>
+                                ${escapeHtml(alert.equipment_id)}
+                            </p>
 
-                        <p>
-                            <strong>Status:</strong>
-                            ${alert.status}
-                        </p>
+                            <p>
+                                <strong>Status:</strong>
+                                ${escapeHtml(alert.status)}
+                            </p>
 
-                        <p>
-                            <strong>Maintenance:</strong>
-                            ${maintenanceStatus}
-                        </p>
+                            <p>
+                                <strong>Maintenance:</strong>
+                                ${maintenanceStatus}
+                            </p>
 
-                        <div class="maintenance-action">
+                            <div class="maintenance-action">
 
-                            🛠️ Recommended Action:
+                                🛠️ Recommended Action:
 
-                            <strong>
-                                Schedule maintenance inspection
-                            </strong>
+                                <strong>
+                                    Schedule maintenance inspection
+                                </strong>
+
+                            </div>
+
+                            <button
+                                onclick="viewMaintenanceEquipment('${escapeJs(alert.equipment_id)}')"
+                            >
+                                🔍 View Equipment
+                            </button>
 
                         </div>
+                    `;
 
-                        <button
-                            onclick="viewMaintenanceEquipment('${alert.equipment_id}')"
-                        >
-                            🔍 View Equipment
-                        </button>
+                })
+                .join("");
 
-                    </div>
-                `;
+    }
 
-            }).join("");
-
-    } catch (error) {
+    catch (error) {
 
         console.error(
             "Maintenance alert error:",
@@ -228,39 +315,47 @@ async function loadMaintenanceAlerts() {
 
         listElement.innerHTML = `
             <div class="maintenance-error">
-
                 ❌ Unable to load maintenance alerts.
-
                 <br>
-
-                ${error.message}
-
+                ${escapeHtml(error.message)}
             </div>
         `;
+
     }
+
 }
 
+
 // ==========================================================
-// FuElectric-AI v3.4.1
 // EQUIPMENT MANAGEMENT
-// ==========================================================
-
-let equipmentData = [];
-
-
-// ==========================================================
-// LOAD EQUIPMENT
 // ==========================================================
 
 async function loadEquipment() {
 
     const tableBody =
-        document.getElementById("equipmentTableBody");
+        document.getElementById(
+            "equipmentTableBody"
+        );
 
     try {
 
+        if (tableBody) {
+
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="8">
+                        Loading equipment...
+                    </td>
+                </tr>
+            `;
+
+        }
+
+
         const response =
-            await fetch(`${API_URL}/equipment`);
+            await fetch(
+                `${API_URL}/equipment`
+            );
 
         if (!response.ok) {
 
@@ -270,34 +365,35 @@ async function loadEquipment() {
 
         }
 
+
         const equipment =
             await response.json();
 
-        console.log(
-            "Equipment loaded:",
-            equipment
+        equipmentData =
+            Array.isArray(equipment)
+                ? equipment
+                : [];
+
+
+        renderEquipment(
+            equipmentData
         );
 
-        equipmentData = Array.isArray(equipment)
-            ? equipment
-            : [];
 
-        // Display equipment table
-        renderEquipment(equipmentData);
-
-        // Populate health selector
         populateEquipmentSelector(
             "equipment-health-select",
             equipmentData
         );
 
-        // Populate diagnosis selector
+
         populateEquipmentSelector(
             "diagnosis-equipment",
             equipmentData
         );
 
-    } catch (error) {
+    }
+
+    catch (error) {
 
         console.error(
             "Equipment loading error:",
@@ -317,17 +413,20 @@ async function loadEquipment() {
         }
 
     }
+
 }
 
 
 // ==========================================================
-// RENDER EQUIPMENT TABLE
+// RENDER EQUIPMENT
 // ==========================================================
 
 function renderEquipment(equipmentList) {
 
     const tableBody =
-        document.getElementById("equipmentTableBody");
+        document.getElementById(
+            "equipmentTableBody"
+        );
 
     if (!tableBody) {
         return;
@@ -352,82 +451,69 @@ function renderEquipment(equipmentList) {
 
 
     tableBody.innerHTML =
-        equipmentList.map(item => `
+        equipmentList
+            .map(item => {
 
-            <tr>
+                return `
+                    <tr>
 
-                <td>
-                    ${escapeHtml(
-                        item.equipment_id || ""
-                    )}
-                </td>
+                        <td>
+                            ${escapeHtml(item.equipment_id)}
+                        </td>
 
-                <td>
-                    ${escapeHtml(
-                        item.name || ""
-                    )}
-                </td>
+                        <td>
+                            ${escapeHtml(item.name)}
+                        </td>
 
-                <td>
-                    ${escapeHtml(
-                        item.category || ""
-                    )}
-                </td>
+                        <td>
+                            ${escapeHtml(item.category)}
+                        </td>
 
-                <td>
-                    ${escapeHtml(
-                        item.manufacturer || "-"
-                    )}
-                </td>
+                        <td>
+                            ${escapeHtml(item.manufacturer || "-")}
+                        </td>
 
-                <td>
-                    ${escapeHtml(
-                        item.model || "-"
-                    )}
-                </td>
+                        <td>
+                            ${escapeHtml(item.model || "-")}
+                        </td>
 
-                <td>
-                    ${escapeHtml(
-                        item.location || ""
-                    )}
-                </td>
+                        <td>
+                            ${escapeHtml(item.location)}
+                        </td>
 
-                <td>
-                    ${escapeHtml(
-                        item.status || "Active"
-                    )}
-                </td>
+                        <td>
+                            ${escapeHtml(item.status || "Active")}
+                        </td>
 
-                <td>
+                        <td>
 
-                    <button
-                        class="action-btn edit-btn"
-                        onclick="editEquipment('${escapeJs(
-                            item.equipment_id
-                        )}')"
-                    >
-                        ✏️ Edit
-                    </button>
+                            <button
+                                class="action-btn edit-btn"
+                                onclick="editEquipment('${escapeJs(item.equipment_id)}')"
+                            >
+                                ✏️ Edit
+                            </button>
 
-                    <button
-                        class="action-btn delete-btn"
-                        onclick="deleteEquipment('${escapeJs(
-                            item.equipment_id
-                        )}')"
-                    >
-                        🗑️ Delete
-                    </button>
+                            <button
+                                class="action-btn delete-btn"
+                                onclick="deleteEquipment('${escapeJs(item.equipment_id)}')"
+                            >
+                                🗑️ Delete
+                            </button>
 
-                </td>
+                        </td>
 
-            </tr>
+                    </tr>
+                `;
 
-        `).join("");
+            })
+            .join("");
+
 }
 
 
 // ==========================================================
-// POPULATE EQUIPMENT SELECTOR
+// EQUIPMENT SELECTOR
 // ==========================================================
 
 function populateEquipmentSelector(
@@ -436,7 +522,9 @@ function populateEquipmentSelector(
 ) {
 
     const selector =
-        document.getElementById(selectorId);
+        document.getElementById(
+            selectorId
+        );
 
     if (!selector) {
         return;
@@ -453,7 +541,9 @@ function populateEquipmentSelector(
     equipment.forEach(item => {
 
         const option =
-            document.createElement("option");
+            document.createElement(
+                "option"
+            );
 
         option.value =
             item.equipment_id;
@@ -461,7 +551,9 @@ function populateEquipmentSelector(
         option.textContent =
             `${item.equipment_id} — ${item.name}`;
 
-        selector.appendChild(option);
+        selector.appendChild(
+            option
+        );
 
     });
 
@@ -502,17 +594,24 @@ function openEquipmentForm() {
 
     form.reset();
 
+
     if (title) {
+
         title.textContent =
             "Add Equipment";
+
     }
+
 
     if (editId) {
+
         editId.value = "";
+
     }
 
 
-    modal.style.display = "flex";
+    modal.style.display =
+        "flex";
 
 }
 
@@ -530,7 +629,8 @@ function closeEquipmentForm() {
 
     if (modal) {
 
-        modal.style.display = "none";
+        modal.style.display =
+            "none";
 
     }
 
@@ -541,150 +641,141 @@ function closeEquipmentForm() {
 // ADD / UPDATE EQUIPMENT
 // ==========================================================
 
-const equipmentForm =
-    document.getElementById(
-        "equipmentForm"
-    );
+async function saveEquipment(event) {
 
-if (equipmentForm) {
-
-    equipmentForm.addEventListener(
-        "submit",
-        async function(event) {
-
-            event.preventDefault();
+    event.preventDefault();
 
 
-            const editId =
-                document.getElementById(
-                    "editEquipmentId"
-                ).value.trim();
+    const editId =
+        document.getElementById(
+            "editEquipmentId"
+        ).value.trim();
 
 
-            const equipment = {
+    const equipment = {
 
-                equipment_id:
-                    editId ||
-                    generateEquipmentId(),
+        equipment_id:
+            editId ||
+            generateEquipmentId(),
 
-                name:
-                    document.getElementById(
-                        "equipmentName"
-                    ).value.trim(),
+        name:
+            document.getElementById(
+                "equipmentName"
+            ).value.trim(),
 
-                category:
-                    document.getElementById(
-                        "equipmentCategory"
-                    ).value.trim(),
+        category:
+            document.getElementById(
+                "equipmentCategory"
+            ).value.trim(),
 
-                manufacturer:
-                    document.getElementById(
-                        "equipmentManufacturer"
-                    ).value.trim(),
+        manufacturer:
+            document.getElementById(
+                "equipmentManufacturer"
+            ).value.trim(),
 
-                model:
-                    document.getElementById(
-                        "equipmentModel"
-                    ).value.trim(),
+        model:
+            document.getElementById(
+                "equipmentModel"
+            ).value.trim(),
 
-                serial_number:
-                    document.getElementById(
-                        "equipmentSerialNumber"
-                    ).value.trim(),
+        serial_number:
+            document.getElementById(
+                "equipmentSerialNumber"
+            ).value.trim(),
 
-                location:
-                    document.getElementById(
-                        "equipmentLocation"
-                    ).value.trim(),
+        location:
+            document.getElementById(
+                "equipmentLocation"
+            ).value.trim(),
 
-                installation_date:
-                    document.getElementById(
-                        "equipmentInstallationDate"
-                    ).value,
+        installation_date:
+            document.getElementById(
+                "equipmentInstallationDate"
+            ).value,
 
-                status:
-                    document.getElementById(
-                        "equipmentStatus"
-                    ).value
+        status:
+            document.getElementById(
+                "equipmentStatus"
+            ).value
 
-            };
-
-
-            try {
-
-                const url = editId
-                    ? `${API_URL}/equipment/${encodeURIComponent(editId)}`
-                    : `${API_URL}/equipment`;
+    };
 
 
-                const method =
-                    editId ? "PUT" : "POST";
+    try {
+
+        const url =
+            editId
+                ? `${API_URL}/equipment/${encodeURIComponent(editId)}`
+                : `${API_URL}/equipment`;
+
+        const method =
+            editId
+                ? "PUT"
+                : "POST";
 
 
-                const response =
-                    await fetch(
-                        url,
-                        {
-                            method: method,
+        const response =
+            await fetch(
+                url,
+                {
+                    method: method,
 
-                            headers: {
-                                "Content-Type":
-                                    "application/json"
-                            },
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
 
-                            body:
-                                JSON.stringify(
-                                    equipment
-                                )
-                        }
-                    );
-
-
-                const data =
-                    await response.json();
-
-
-                if (!response.ok) {
-
-                    throw new Error(
-                        data.detail ||
-                        "Equipment save failed."
-                    );
-
+                    body:
+                        JSON.stringify(
+                            equipment
+                        )
                 }
+            );
 
 
-                closeEquipmentForm();
+        const data =
+            await response.json();
 
 
-                showMessage(
-                    editId
-                        ? "Equipment updated successfully."
-                        : "Equipment registered successfully."
-                );
+        if (!response.ok) {
 
-
-                await loadEquipment();
-
-                await loadDashboard();
-
-
-            } catch (error) {
-
-                console.error(
-                    "Equipment save error:",
-                    error
-                );
-
-                showMessage(
-                    "Equipment error: " +
-                    error.message
-                );
-
-            }
+            throw new Error(
+                data.detail ||
+                "Equipment save failed."
+            );
 
         }
-    );
+
+
+        closeEquipmentForm();
+
+
+        showMessage(
+            editId
+                ? "Equipment updated successfully."
+                : "Equipment registered successfully."
+        );
+
+
+        await loadEquipment();
+
+        await loadDashboard();
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Equipment save error:",
+            error
+        );
+
+        showMessage(
+            "Equipment error: " +
+            error.message
+        );
+
+    }
 
 }
 
@@ -693,12 +784,15 @@ if (equipmentForm) {
 // EDIT EQUIPMENT
 // ==========================================================
 
-function editEquipment(equipmentId) {
+function editEquipment(
+    equipmentId
+) {
 
     const equipment =
         equipmentData.find(
             item =>
-                item.equipment_id === equipmentId
+                item.equipment_id ===
+                equipmentId
         );
 
 
@@ -803,9 +897,7 @@ async function deleteEquipment(
 
         const response =
             await fetch(
-                `${API_URL}/equipment/${encodeURIComponent(
-                    equipmentId
-                )}`,
+                `${API_URL}/equipment/${encodeURIComponent(equipmentId)}`,
                 {
                     method: "DELETE"
                 }
@@ -835,8 +927,9 @@ async function deleteEquipment(
 
         await loadDashboard();
 
+    }
 
-    } catch (error) {
+    catch (error) {
 
         console.error(
             "Delete equipment error:",
@@ -863,7 +956,6 @@ function searchEquipment() {
         document.getElementById(
             "equipmentSearch"
         );
-
 
     if (!searchInput) {
         return;
@@ -924,13 +1016,15 @@ function searchEquipment() {
         });
 
 
-    renderEquipment(filtered);
+    renderEquipment(
+        filtered
+    );
 
 }
 
 
 // ==========================================================
-// FILTER EQUIPMENT BY STATUS
+// FILTER EQUIPMENT
 // ==========================================================
 
 function filterEquipment() {
@@ -939,7 +1033,6 @@ function filterEquipment() {
         document.getElementById(
             "equipmentStatusFilter"
         );
-
 
     if (!filter) {
         return;
@@ -963,7 +1056,8 @@ function filterEquipment() {
     const filtered =
         equipmentData.filter(
             item =>
-                (item.status || "Active") === status
+                (item.status || "Active") ===
+                status
         );
 
 
@@ -975,599 +1069,10 @@ function filterEquipment() {
 
 
 // ==========================================================
-// GENERATE EQUIPMENT ID
+// EQUIPMENT HEALTH
 // ==========================================================
 
-function generateEquipmentId() {
-
-    return (
-        "EQ-" +
-        Date.now()
-            .toString()
-            .slice(-8)
-    );
-
-}
-
-
-// ==========================================================
-// HTML SAFETY
-// ==========================================================
-
-function escapeHtml(value) {
-
-    return String(value)
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-        .replace(
-            /</g,
-            "&lt;"
-        )
-        .replace(
-            />/g,
-            "&gt;"
-        )
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-        .replace(
-            /'/g,
-            "&#039;"
-        );
-
-}
-
-
-function escapeJs(value) {
-
-    return String(value)
-        .replace(
-            /\\/g,
-            "\\\\"
-        )
-        .replace(
-            /'/g,
-            "\\'"
-        );
-
-}
-
-
-// ==========================================================
-// LOAD EQUIPMENT
-// ==========================================================
-
-async function loadEquipment() {
-
-    const tableBody = document.getElementById("equipmentTableBody");
-
-    try {
-
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="8">Loading equipment...</td>
-            </tr>
-        `;
-
-        const response = await fetch(`${API_URL}/equipment`);
-
-        if (!response.ok) {
-            throw new Error("Failed to load equipment");
-        }
-
-        equipmentData = await response.json();
-
-        renderEquipment(equipmentData);
-
-    } catch (error) {
-
-        console.error("Equipment loading error:", error);
-
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="8">
-                    Unable to load equipment.
-                </td>
-            </tr>
-        `;
-    }
-}
-
-
-// ==========================================================
-// RENDER EQUIPMENT
-// ==========================================================
-
-function renderEquipment(equipmentList) {
-
-    const tableBody =
-        document.getElementById("equipmentTableBody");
-
-    if (!equipmentList || equipmentList.length === 0) {
-
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="8">
-                    No equipment found.
-                </td>
-            </tr>
-        `;
-
-        return;
-    }
-
-    tableBody.innerHTML = equipmentList.map(item => `
-
-        <tr>
-
-            <td>${escapeHtml(item.equipment_id || "")}</td>
-
-            <td>${escapeHtml(item.name || "")}</td>
-
-            <td>${escapeHtml(item.category || "")}</td>
-
-            <td>${escapeHtml(item.manufacturer || "-")}</td>
-
-            <td>${escapeHtml(item.model || "-")}</td>
-
-            <td>${escapeHtml(item.location || "")}</td>
-
-            <td>${escapeHtml(item.status || "")}</td>
-
-            <td>
-
-                <button
-                    class="action-btn edit-btn"
-                    onclick="editEquipment('${escapeJs(item.equipment_id)}')"
-                >
-                    Edit
-                </button>
-
-                <button
-                    class="action-btn delete-btn"
-                    onclick="deleteEquipment('${escapeJs(item.equipment_id)}')"
-                >
-                    Delete
-                </button>
-
-            </td>
-
-        </tr>
-
-    `).join("");
-}
-
-
-// ==========================================================
-// OPEN FORM
-// ==========================================================
-
-function openEquipmentForm() {
-
-    document.getElementById("equipmentModal").style.display = "flex";
-
-    document.getElementById("equipmentModalTitle").textContent =
-        "Add Equipment";
-
-    document.getElementById("equipmentForm").reset();
-
-    document.getElementById("editEquipmentId").value = "";
-
-}
-
-
-// ==========================================================
-// CLOSE FORM
-// ==========================================================
-
-function closeEquipmentForm() {
-
-    document.getElementById("equipmentModal").style.display = "none";
-
-}
-
-
-// ==========================================================
-// ADD / UPDATE EQUIPMENT
-// ==========================================================
-
-document
-    .getElementById("equipmentForm")
-    .addEventListener("submit", async function(event) {
-
-        event.preventDefault();
-
-        const editId =
-            document.getElementById("editEquipmentId").value;
-
-        const equipment = {
-
-            equipment_id: editId ||
-                generateEquipmentId(),
-
-            name:
-                document.getElementById("equipmentName").value.trim(),
-
-            category:
-                document.getElementById("equipmentCategory").value.trim(),
-
-            manufacturer:
-                document.getElementById("equipmentManufacturer").value.trim(),
-
-            model:
-                document.getElementById("equipmentModel").value.trim(),
-
-            serial_number:
-                document.getElementById("equipmentSerialNumber").value.trim(),
-
-            location:
-                document.getElementById("equipmentLocation").value.trim(),
-
-            installation_date:
-                document.getElementById("equipmentInstallationDate").value,
-
-            status:
-                document.getElementById("equipmentStatus").value
-
-        };
-
-
-        try {
-
-            let response;
-
-            if (editId) {
-
-                // UPDATE
-                response = await fetch(
-                    `${API_URL}/equipment/${encodeURIComponent(editId)}`,
-                    {
-                        method: "PUT",
-
-                        headers: {
-                            "Content-Type": "application/json"
-                        },
-
-                        body: JSON.stringify(equipment)
-                    }
-                );
-
-            } else {
-
-                // CREATE
-                response = await fetch(
-                    `${API_URL}/equipment`,
-                    {
-                        method: "POST",
-
-                        headers: {
-                            "Content-Type": "application/json"
-                        },
-
-                        body: JSON.stringify(equipment)
-                    }
-                );
-            }
-
-
-            if (!response.ok) {
-
-                const errorText = await response.text();
-
-                throw new Error(errorText);
-            }
-
-
-            document.getElementById("equipmentMessage").textContent =
-                editId
-                    ? "Equipment updated successfully."
-                    : "Equipment added successfully.";
-
-            closeEquipmentForm();
-
-            await loadEquipment();
-
-        } catch (error) {
-
-            console.error("Equipment save error:", error);
-
-            document.getElementById("equipmentMessage").textContent =
-                "Failed to save equipment.";
-        }
-
-    });
-
-
-// ==========================================================
-// EDIT EQUIPMENT
-// ==========================================================
-
-function editEquipment(equipmentId) {
-
-    const equipment = equipmentData.find(
-        item => item.equipment_id === equipmentId
-    );
-
-    if (!equipment) {
-        alert("Equipment not found.");
-        return;
-    }
-
-
-    document.getElementById("equipmentModalTitle").textContent =
-        "Edit Equipment";
-
-
-    document.getElementById("editEquipmentId").value =
-        equipment.equipment_id || "";
-
-    document.getElementById("equipmentName").value =
-        equipment.name || "";
-
-    document.getElementById("equipmentCategory").value =
-        equipment.category || "";
-
-    document.getElementById("equipmentManufacturer").value =
-        equipment.manufacturer || "";
-
-    document.getElementById("equipmentModel").value =
-        equipment.model || "";
-
-    document.getElementById("equipmentSerialNumber").value =
-        equipment.serial_number || "";
-
-    document.getElementById("equipmentLocation").value =
-        equipment.location || "";
-
-    document.getElementById("equipmentInstallationDate").value =
-        equipment.installation_date || "";
-
-    document.getElementById("equipmentStatus").value =
-        equipment.status || "Active";
-
-
-    document.getElementById("equipmentModal").style.display =
-        "flex";
-}
-
-
-// ==========================================================
-// DELETE EQUIPMENT
-// ==========================================================
-
-async function deleteEquipment(equipmentId) {
-
-    const confirmed = confirm(
-        "Are you sure you want to delete this equipment?"
-    );
-
-    if (!confirmed) {
-        return;
-    }
-
-
-    try {
-
-        const response = await fetch(
-            `${API_URL}/equipment/${encodeURIComponent(equipmentId)}`,
-            {
-                method: "DELETE"
-            }
-        );
-
-
-        if (!response.ok) {
-
-            const errorText = await response.text();
-
-            throw new Error(errorText);
-        }
-
-
-        await loadEquipment();
-
-        alert("Equipment deleted successfully.");
-
-    } catch (error) {
-
-        console.error("Delete error:", error);
-
-        alert("Failed to delete equipment.");
-    }
-}
-
-
-// ==========================================================
-// SEARCH EQUIPMENT
-// ==========================================================
-
-function searchEquipment() {
-
-    const searchValue =
-        document.getElementById("equipmentSearch")
-            .value
-            .toLowerCase()
-            .trim();
-
-
-    const filtered = equipmentData.filter(item => {
-
-        return (
-
-            (item.equipment_id || "")
-                .toLowerCase()
-                .includes(searchValue)
-
-            ||
-
-            (item.name || "")
-                .toLowerCase()
-                .includes(searchValue)
-
-            ||
-
-            (item.category || "")
-                .toLowerCase()
-                .includes(searchValue)
-
-            ||
-
-            (item.manufacturer || "")
-                .toLowerCase()
-                .includes(searchValue)
-
-            ||
-
-            (item.location || "")
-                .toLowerCase()
-                .includes(searchValue)
-
-        );
-
-    });
-
-
-    renderEquipment(filtered);
-}
-
-
-// ==========================================================
-// FILTER BY STATUS
-// ==========================================================
-
-function filterEquipment() {
-
-    const status =
-        document.getElementById("equipmentStatusFilter").value;
-
-
-    if (!status) {
-
-        renderEquipment(equipmentData);
-
-        return;
-    }
-
-
-    const filtered =
-        equipmentData.filter(
-            item => item.status === status
-        );
-
-
-    renderEquipment(filtered);
-}
-
-
-// ==========================================================
-// GENERATE EQUIPMENT ID
-// ==========================================================
-
-function generateEquipmentId() {
-
-    return "EQ-" +
-        Date.now().toString().slice(-8);
-}
-
-
-// ==========================================================
-// HTML SAFETY
-// ==========================================================
-
-function escapeHtml(value) {
-
-    return String(value)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
-
-
-function escapeJs(value) {
-
-    return String(value)
-        .replace(/\\/g, "\\\\")
-        .replace(/'/g, "\\'");
-}
-
-
-// ==========================================================
-// INITIAL LOAD
-// ==========================================================
-
-document.addEventListener(
-    "DOMContentLoaded",
-    function() {
-
-        loadEquipment();
-
-    }
-);
-
-// ==========================================================
-// MAINTENANCE ALERT — VIEW EQUIPMENT
-// ==========================================================
-
-function viewMaintenanceEquipment(equipmentId) {
-
-    console.log(
-        "Viewing maintenance equipment:",
-        equipmentId
-    );
-
-    const selector =
-        document.getElementById(
-            "equipment-health-select"
-        );
-
-    if (!selector) {
-
-        console.error(
-            "Equipment health selector not found."
-        );
-
-        return;
-    }
-
-    // Select the equipment
-    selector.value = equipmentId;
-
-    // Trigger the health lookup
-    selector.dispatchEvent(
-        new Event("change")
-    );
-
-    // Find the Equipment Health card
-    const healthCard =
-        selector.closest(".card");
-
-    if (healthCard) {
-
-        healthCard.scrollIntoView({
-            behavior: "smooth",
-            block: "center"
-        });
-
-    } else {
-
-        // Fallback
-        selector.scrollIntoView({
-            behavior: "smooth",
-            block: "center"
-        });
-    }
-}
-
-// ==========================================================
-// EQUIPMENT HEALTH — v3.2.1
-// ==========================================================
-
-async function loadEquipmentHealth() {
+function loadEquipmentHealth() {
 
     const selector =
         document.getElementById(
@@ -1585,7 +1090,6 @@ async function loadEquipmentHealth() {
             const equipmentId =
                 this.value;
 
-
             const healthElement =
                 document.getElementById(
                     "equipment-health"
@@ -1600,13 +1104,18 @@ async function loadEquipmentHealth() {
             if (!equipmentId) {
 
                 if (healthElement) {
+
                     healthElement.textContent =
                         "--";
+
                 }
 
+
                 if (statusElement) {
+
                     statusElement.textContent =
                         "Select equipment to view health";
+
                 }
 
                 return;
@@ -1617,9 +1126,7 @@ async function loadEquipmentHealth() {
 
                 const response =
                     await fetch(
-                        `${API_URL}/equipment/${encodeURIComponent(
-                            equipmentId
-                        )}/health`
+                        `${API_URL}/equipment/${encodeURIComponent(equipmentId)}/health`
                     );
 
 
@@ -1652,8 +1159,9 @@ async function loadEquipmentHealth() {
 
                 }
 
+            }
 
-            } catch (error) {
+            catch (error) {
 
                 console.error(
                     "Equipment health error:",
@@ -1662,14 +1170,18 @@ async function loadEquipmentHealth() {
 
 
                 if (healthElement) {
+
                     healthElement.textContent =
                         "--";
+
                 }
 
 
                 if (statusElement) {
+
                     statusElement.textContent =
                         "Could not load equipment health.";
+
                 }
 
             }
@@ -1678,54 +1190,78 @@ async function loadEquipmentHealth() {
 
 }
 
+
 // ==========================================================
-// AI DIAGNOSIS
+// MAINTENANCE ALERT → EQUIPMENT
+// ==========================================================
+
+function viewMaintenanceEquipment(
+    equipmentId
+) {
+
+    const selector =
+        document.getElementById(
+            "equipment-health-select"
+        );
+
+    if (!selector) {
+        return;
+    }
+
+
+    selector.value =
+        equipmentId;
+
+
+    selector.dispatchEvent(
+        new Event("change")
+    );
+
+
+    selector.closest(".card")
+        ?.scrollIntoView({
+            behavior: "smooth",
+            block: "center"
+        });
+
+}
+
+
+// ==========================================================
+// AI DIAGNOSIS EQUIPMENT
 // ==========================================================
 
 async function loadDiagnosisEquipment() {
 
     try {
 
-        const response = await fetch(
-            `${API_URL}/equipment`
-        );
+        const response =
+            await fetch(
+                `${API_URL}/equipment`
+            );
+
 
         if (!response.ok) {
+
             throw new Error(
                 `Equipment request failed: ${response.status}`
             );
+
         }
 
-        const equipment = await response.json();
 
-        const selector =
-            document.getElementById(
-                "diagnosis-equipment"
-            );
+        const equipment =
+            await response.json();
 
-        if (!selector) {
-            return;
-        }
 
-        selector.innerHTML =
-            `<option value="">Select Equipment</option>`;
+        populateEquipmentSelector(
+            "diagnosis-equipment",
+            equipment
+        );
 
-        equipment.forEach(item => {
+    }
 
-            const option =
-                document.createElement("option");
-
-            option.value =
-                item.equipment_id;
-
-            option.textContent =
-                `${item.equipment_id} — ${item.name}`;
-
-            selector.appendChild(option);
-
-        });
-
-    } catch (error) {
+    catch (error) {
 
         console.error(
             "Diagnosis equipment loading error:",
@@ -1736,25 +1272,30 @@ async function loadDiagnosisEquipment() {
 
 }
 
+
 // ==========================================================
-// AI DIAGNOSIS — v3.4.3
+// AI DIAGNOSIS
 // ==========================================================
 
 async function runDiagnosis() {
 
     const equipment =
-        document.getElementById("diagnosis-equipment").value;
+        document.getElementById(
+            "diagnosis-equipment"
+        ).value;
+
 
     const fault =
-        document.getElementById("diagnosis-fault").value;
+        document.getElementById(
+            "diagnosis-fault"
+        ).value;
+
 
     const result =
-        document.getElementById("diagnosis-result");
+        document.getElementById(
+            "diagnosis-result"
+        );
 
-
-    // ------------------------------------------------------
-    // VALIDATION
-    // ------------------------------------------------------
 
     if (!equipment || !fault) {
 
@@ -1768,10 +1309,6 @@ async function runDiagnosis() {
     }
 
 
-    // ------------------------------------------------------
-    // SHOW LOADING
-    // ------------------------------------------------------
-
     result.innerHTML = `
         <div class="alert alert-info">
             🔄 FuElectric-AI is analyzing the equipment...
@@ -1781,33 +1318,32 @@ async function runDiagnosis() {
 
     try {
 
-        // --------------------------------------------------
-        // SEND REQUEST TO FASTAPI
-        // --------------------------------------------------
+        const response =
+            await fetch(
+                `${API_URL}/diagnose`,
+                {
+                    method: "POST",
 
-        const response = await fetch(
-            `${API_URL}/diagnose`,
-            {
-                method: "POST",
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
 
-                headers: {
-                    "Content-Type": "application/json"
-                },
+                    body:
+                        JSON.stringify({
+                            equipment:
+                                equipment,
 
-                body: JSON.stringify({
-                    equipment: equipment,
-                    fault: fault
-                })
-            }
-        );
-
-
-        const data = await response.json();
+                            fault:
+                                fault
+                        })
+                }
+            );
 
 
-        // --------------------------------------------------
-        // HANDLE API ERROR
-        // --------------------------------------------------
+        const data =
+            await response.json();
+
 
         if (!response.ok) {
 
@@ -1819,127 +1355,155 @@ async function runDiagnosis() {
         }
 
 
-        // --------------------------------------------------
-       // DISPLAY REAL FU-ELECTRIC-AI RESPONSE
-      // --------------------------------------------------
+        result.innerHTML = `
 
-result.innerHTML = `
+            <div class="diagnosis-success">
 
-    <div class="diagnosis-success">
+                <h3>
+                    🤖 FuElectric-AI Diagnosis
+                </h3>
 
-        <h3>
-            🤖 FuElectric-AI Diagnosis
-        </h3>
+                <p>
+                    <strong>Equipment ID:</strong>
+                    ${escapeHtml(data.equipment_id)}
+                </p>
 
-        <p>
-            <strong>Equipment ID:</strong>
-            ${data.equipment_id}
-        </p>
+                <p>
+                    <strong>Equipment:</strong>
+                    ${escapeHtml(data.equipment_name)}
+                </p>
 
-        <p>
-            <strong>Equipment:</strong>
-            ${data.equipment_name}
-        </p>
+                <p>
+                    <strong>Reported Fault:</strong>
+                    ${escapeHtml(data.fault)}
+                </p>
 
-        <p>
-            <strong>Reported Fault:</strong>
-            ${data.fault}
-        </p>
+                <p>
+                    <strong>Fault ID:</strong>
+                    ${escapeHtml(data.id)}
+                </p>
 
-        <p>
-            <strong>Fault ID:</strong>
-            ${data.id}
-        </p>
+                <p>
+                    <strong>Category:</strong>
+                    ${escapeHtml(data.category)}
+                </p>
 
-        <p>
-            <strong>Category:</strong>
-            ${data.category}
-        </p>
+                <p>
+                    <strong>Severity:</strong>
+                    ${escapeHtml(data.severity)}
+                </p>
 
-        <p>
-            <strong>Severity:</strong>
-            ${data.severity}
-        </p>
+                <p>
+                    <strong>Risk Level:</strong>
+                    ${escapeHtml(data.risk_level)}
+                </p>
 
-        <p>
-            <strong>Risk Level:</strong>
-            ${data.risk_level}
-        </p>
-
-        <p>
-            <strong>Emergency:</strong>
-            ${data.is_emergency ? "🚨 Yes" : "✅ No"}
-        </p>
+                <p>
+                    <strong>Emergency:</strong>
+                    ${data.is_emergency
+                        ? "🚨 Yes"
+                        : "✅ No"}
+                </p>
 
 
-        <h4>🔎 Possible Causes</h4>
+                <h4>
+                    🔎 Possible Causes
+                </h4>
 
-        <ul>
-            ${
-                Array.isArray(data.causes)
-                    ? data.causes
-                        .map(cause => `<li>${cause}</li>`)
-                        .join("")
-                    : "<li>No causes provided.</li>"
-            }
-        </ul>
+                <ul>
 
+                    ${
+                        Array.isArray(data.causes)
+                            ? data.causes
+                                .map(
+                                    cause =>
+                                        `<li>${escapeHtml(cause)}</li>`
+                                )
+                                .join("")
+                            : "<li>No causes provided.</li>"
+                    }
 
-        <h4>🛠️ Recommendations</h4>
-
-        <ul>
-            ${
-                Array.isArray(data.recommendations)
-                    ? data.recommendations
-                        .map(item => `<li>${item}</li>`)
-                        .join("")
-                    : "<li>No recommendations provided.</li>"
-            }
-        </ul>
+                </ul>
 
 
-        <p>
-            <strong>Estimated Repair Time:</strong>
-            ${data.repair_time || "Not provided"}
-        </p>
+                <h4>
+                    🛠️ Recommendations
+                </h4>
+
+                <ul>
+
+                    ${
+                        Array.isArray(data.recommendations)
+                            ? data.recommendations
+                                .map(
+                                    item =>
+                                        `<li>${escapeHtml(item)}</li>`
+                                )
+                                .join("")
+                            : "<li>No recommendations provided.</li>"
+                    }
+
+                </ul>
 
 
-        <h4>🔧 Required Tools</h4>
+                <p>
+                    <strong>Estimated Repair Time:</strong>
+                    ${escapeHtml(
+                        data.repair_time ||
+                        "Not provided"
+                    )}
+                </p>
 
-        <ul>
-            ${
-                Array.isArray(data.tools)
-                    ? data.tools
-                        .map(tool => `<li>${tool}</li>`)
-                        .join("")
-                    : "<li>No tools listed.</li>"
-            }
-            </ul>
 
-    </div>
-    <button
-    class="primary-btn"
-    onclick="createWorkOrderFromDiagnosis(
-        '${escapeJs(data.equipment_id)}',
-        '${escapeJs(data.id || "")}',
-        '${escapeJs(data.fault || "")}',
-        '${escapeJs(
-            Array.isArray(data.recommendations)
-                ? data.recommendations.join("; ")
-                : ""
-        )}'
-    )"
->
-    🛠️ Create Work Order
-</button>
-`;
+                <h4>
+                    🔧 Required Tools
+                </h4>
 
-    } catch (error) {
+                <ul>
+
+                    ${
+                        Array.isArray(data.tools)
+                            ? data.tools
+                                .map(
+                                    tool =>
+                                        `<li>${escapeHtml(tool)}</li>`
+                                )
+                                .join("")
+                            : "<li>No tools listed.</li>"
+                    }
+
+                </ul>
+
+            </div>
+
+
+            <button
+                class="primary-btn"
+                onclick="createWorkOrderFromDiagnosis(
+                    '${escapeJs(data.equipment_id)}',
+                    '${escapeJs(data.id || "")}',
+                    '${escapeJs(data.fault || "")}',
+                    '${escapeJs(
+                        Array.isArray(data.recommendations)
+                            ? data.recommendations.join("; ")
+                            : ""
+                    )}'
+                )"
+            >
+                🛠️ Create Work Order
+            </button>
+
+        `;
+
+    }
+
+    catch (error) {
 
         console.error(
             "Diagnosis error:",
             error
         );
+
 
         result.innerHTML = `
             <div class="alert alert-danger">
@@ -1952,8 +1516,9 @@ result.innerHTML = `
 
 }
 
+
 // ==========================================================
-// CREATE WORK ORDER FROM AI DIAGNOSIS — v3.4.0
+// DIAGNOSIS → WORK ORDER
 // ==========================================================
 
 function createWorkOrderFromDiagnosis(
@@ -1983,10 +1548,13 @@ function createWorkOrderFromDiagnosis(
             "work-order-priority"
         );
 
-    if (!equipmentInput ||
+
+    if (
+        !equipmentInput ||
         !descriptionInput ||
         !typeInput ||
-        !priorityInput) {
+        !priorityInput
+    ) {
 
         showMessage(
             "Work Order form not found."
@@ -1995,25 +1563,32 @@ function createWorkOrderFromDiagnosis(
         return;
     }
 
-    // Populate equipment
-    equipmentInput.value = equipmentId;
 
-    // Work type
-    typeInput.value = "Repair";
+    equipmentInput.value =
+        equipmentId;
 
-    // Determine priority from diagnosis
-    priorityInput.value = "Medium";
 
-    // Build description
+    typeInput.value =
+        "Repair";
+
+
+    priorityInput.value =
+        "Medium";
+
+
     descriptionInput.value =
         `AI Diagnosis ${faultId || ""}: ${fault || ""}. ` +
-        `Recommended action: ${recommendation || "Inspect equipment."}`;
+        `Recommended action: ${
+            recommendation ||
+            "Inspect equipment."
+        }`;
 
-    // Scroll to Work Order section
+
     const workOrderSection =
         document.querySelector(
             ".work-order-section"
         );
+
 
     if (workOrderSection) {
 
@@ -2024,63 +1599,469 @@ function createWorkOrderFromDiagnosis(
 
     }
 
+
     showMessage(
         "AI diagnosis transferred to Work Order."
     );
+
 }
 
+
 // ==========================================================
-// EQUIPMENT SCANNER — v3.4.4
+// CAMERA SCANNER — v3.4.5
 // ==========================================================
 
-async function scanEquipment() {
 
+// ----------------------------------------------------------
+// CAMERA STATUS
+// ----------------------------------------------------------
+
+function setCameraStatus(
+    message
+) {
+
+    const status =
+        document.getElementById(
+            "camera-status"
+        );
+
+    if (status) {
+
+        status.textContent =
+            message;
+
+    }
+
+}
+
+
+// ----------------------------------------------------------
+// START CAMERA
+// ----------------------------------------------------------
+
+async function startCamera() {
+
+    const video =
+        document.getElementById(
+            "camera-preview"
+        );
+
+
+    if (!video) {
+
+        console.error(
+            "Camera preview element not found."
+        );
+
+        return;
+    }
+
+
+    if (
+        !navigator.mediaDevices ||
+        !navigator.mediaDevices.getUserMedia
+    ) {
+
+        setCameraStatus(
+            "❌ Camera access is not supported by this browser."
+        );
+
+        return;
+    }
+
+
+    try {
+
+        await stopCamera();
+
+
+        cameraStream =
+            await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: {
+                        ideal: "environment"
+                    }
+                },
+
+                audio: false
+            });
+
+
+        video.srcObject =
+            cameraStream;
+
+
+        cameraScanning =
+            true;
+
+
+        setCameraStatus(
+            "🟢 Camera active. Position the Equipment ID inside the frame."
+        );
+
+
+        if (
+            "BarcodeDetector" in window
+        ) {
+
+            barcodeDetector =
+                new BarcodeDetector({
+                    formats: [
+                        "qr_code",
+                        "code_128",
+                        "code_39",
+                        "code_93",
+                        "ean_13",
+                        "ean_8",
+                        "upc_a",
+                        "upc_e"
+                    ]
+                });
+
+
+            scanCamera();
+
+        }
+
+        else {
+
+            setCameraStatus(
+                "🟢 Camera active. Automatic barcode scanning is not supported in this browser."
+            );
+
+        }
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Camera error:",
+            error
+        );
+
+
+        cameraStream =
+            null;
+
+
+        cameraScanning =
+            false;
+
+
+        if (
+            error.name ===
+            "NotAllowedError"
+        ) {
+
+            setCameraStatus(
+                "❌ Camera permission was denied."
+            );
+
+        }
+
+        else if (
+            error.name ===
+            "NotFoundError"
+        ) {
+
+            setCameraStatus(
+                "❌ No camera was found."
+            );
+
+        }
+
+        else {
+
+            setCameraStatus(
+                "❌ Unable to start camera."
+            );
+
+        }
+
+    }
+
+}
+
+
+// ----------------------------------------------------------
+// STOP CAMERA
+// ----------------------------------------------------------
+
+function stopCamera() {
+
+    cameraScanning =
+        false;
+
+
+    if (cameraStream) {
+
+        cameraStream
+            .getTracks()
+            .forEach(track => {
+
+                track.stop();
+
+            });
+
+
+        cameraStream =
+            null;
+
+    }
+
+
+    const video =
+        document.getElementById(
+            "camera-preview"
+        );
+
+
+    if (video) {
+
+        video.srcObject =
+            null;
+
+    }
+
+
+    setCameraStatus(
+        "Camera is not active."
+    );
+
+}
+
+
+// ----------------------------------------------------------
+// SCAN CAMERA
+// ----------------------------------------------------------
+
+async function scanCamera() {
+
+    const video =
+        document.getElementById(
+            "camera-preview"
+        );
+
+
+    if (!video) {
+        return;
+    }
+
+
+    if (!cameraStream) {
+
+        setCameraStatus(
+            "⚠️ Start the camera first."
+        );
+
+        return;
+    }
+
+
+    if (
+        !("BarcodeDetector" in window)
+    ) {
+
+        setCameraStatus(
+            "⚠️ Automatic barcode scanning is not supported by this browser. Use manual Equipment ID entry."
+        );
+
+        return;
+    }
+
+
+    if (!barcodeDetector) {
+
+        try {
+
+            barcodeDetector =
+                new BarcodeDetector({
+                    formats: [
+                        "qr_code",
+                        "code_128",
+                        "code_39",
+                        "code_93",
+                        "ean_13",
+                        "ean_8",
+                        "upc_a",
+                        "upc_e"
+                    ]
+                });
+
+        }
+
+        catch (error) {
+
+            console.error(
+                "Barcode detector error:",
+                error
+            );
+
+            setCameraStatus(
+                "❌ Barcode scanner could not be initialized."
+            );
+
+            return;
+        }
+
+    }
+
+
+    try {
+
+        const barcodes =
+            await barcodeDetector.detect(
+                video
+            );
+
+
+        if (
+            barcodes &&
+            barcodes.length > 0
+        ) {
+
+            const detectedValue =
+                barcodes[0].rawValue;
+
+
+            console.log(
+                "Detected Equipment ID:",
+                detectedValue
+            );
+
+
+            const input =
+                document.getElementById(
+                    "scanner-equipment-id"
+                );
+
+
+            if (input) {
+
+                input.value =
+                    detectedValue;
+
+            }
+
+
+            setCameraStatus(
+                `✅ Equipment ID detected: ${detectedValue}`
+            );
+
+
+            await scanEquipment(
+                detectedValue
+            );
+
+
+            return;
+
+        }
+
+
+        if (cameraScanning) {
+
+            requestAnimationFrame(
+                scanCamera
+            );
+
+        }
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Camera scanning error:",
+            error
+        );
+
+
+        if (cameraScanning) {
+
+            requestAnimationFrame(
+                scanCamera
+            );
+
+        }
+
+    }
+
+}
+
+
+// ==========================================================
+// MANUAL / CAMERA EQUIPMENT LOOKUP
+// ==========================================================
+
+async function scanEquipment(
+    detectedEquipmentId = null
+) {
 
     const input =
         document.getElementById(
             "scanner-equipment-id"
         );
 
+
     const result =
         document.getElementById(
             "scanner-result"
         );
 
-    if (!input || !result) {
-        return;
-    }
 
     const equipmentId =
-        input.value.trim();
+        detectedEquipmentId ||
+        input?.value.trim();
+
 
     if (!equipmentId) {
 
-        result.innerHTML = `
-            <div class="alert alert-warning">
-                ⚠️ Please enter an Equipment ID.
-            </div>
-        `;
+        if (result) {
+
+            result.innerHTML = `
+                <div class="alert alert-warning">
+                    ⚠️ Enter or scan an Equipment ID.
+                </div>
+            `;
+
+        }
 
         return;
     }
 
-    result.innerHTML = `
-        <div class="alert alert-info">
-            🔄 Searching for equipment...
-        </div>
-    `;
+
+    if (input) {
+
+        input.value =
+            equipmentId;
+
+    }
+
+
+    if (result) {
+
+        result.innerHTML = `
+            <div class="alert alert-info">
+                🔍 Searching for equipment...
+            </div>
+        `;
+
+    }
+
 
     try {
 
         const response =
             await fetch(
-                `${API_URL}/equipment/${encodeURIComponent(
-                    equipmentId
-                )}`
+                `${API_URL}/equipment/${encodeURIComponent(equipmentId)}`
             );
+
 
         const data =
             await response.json();
+
 
         if (!response.ok) {
 
@@ -2088,152 +2069,157 @@ async function scanEquipment() {
                 data.detail ||
                 "Equipment not found."
             );
+
         }
 
-        result.innerHTML = `
 
-            <div class="scanner-equipment-card">
+        if (result) {
 
-                <h3>
-                    ✅ Equipment Found
-                </h3>
+            result.innerHTML = `
 
-                <p>
-                    <strong>Equipment ID:</strong>
-                    ${escapeHtml(
-                        data.equipment_id || ""
-                    )}
-                </p>
+                <div class="scanner-success">
 
-                <p>
-                    <strong>Name:</strong>
-                    ${escapeHtml(
-                        data.name || "-"
-                    )}
-                </p>
+                    <h3>
+                        ✅ Equipment Found
+                    </h3>
 
-                <p>
-                    <strong>Category:</strong>
-                    ${escapeHtml(
-                        data.category || "-"
-                    )}
-                </p>
+                    <p>
+                        <strong>Equipment ID:</strong>
+                        ${escapeHtml(data.equipment_id)}
+                    </p>
 
-                <p>
-                    <strong>Manufacturer:</strong>
-                    ${escapeHtml(
-                        data.manufacturer || "-"
-                    )}
-                </p>
+                    <p>
+                        <strong>Name:</strong>
+                        ${escapeHtml(data.name)}
+                    </p>
 
-                <p>
-                    <strong>Model:</strong>
-                    ${escapeHtml(
-                        data.model || "-"
-                    )}
-                </p>
+                    <p>
+                        <strong>Category:</strong>
+                        ${escapeHtml(data.category)}
+                    </p>
 
-                <p>
-                    <strong>Serial Number:</strong>
-                    ${escapeHtml(
-                        data.serial_number || "-"
-                    )}
-                </p>
+                    <p>
+                        <strong>Manufacturer:</strong>
+                        ${escapeHtml(data.manufacturer || "-")}
+                    </p>
 
-                <p>
-                    <strong>Location:</strong>
-                    ${escapeHtml(
-                        data.location || "-"
-                    )}
-                </p>
+                    <p>
+                        <strong>Model:</strong>
+                        ${escapeHtml(data.model || "-")}
+                    </p>
 
-                <p>
-                    <strong>Status:</strong>
-                    ${escapeHtml(
-                        data.status || "-"
-                    )}
-                </p>
+                    <p>
+                        <strong>Serial Number:</strong>
+                        ${escapeHtml(data.serial_number || "-")}
+                    </p>
 
-                <p>
-                    <strong>Installation Date:</strong>
-                    ${escapeHtml(
-                        data.installation_date || "-"
-                    )}
-                </p>
+                    <p>
+                        <strong>Location:</strong>
+                        ${escapeHtml(data.location)}
+                    </p>
 
-                <div class="scanner-actions">
+                    <p>
+                        <strong>Status:</strong>
+                        ${escapeHtml(data.status || "Active")}
+                    </p>
 
-                    <button
-                        type="button"
-                        onclick="openScannedHealth('${escapeJs(
-                            data.equipment_id
-                        )}')"
-                    >
-                        ❤️ Equipment Health
-                    </button>
+                    <div class="scanner-actions">
 
-                    <button
-                        type="button"
-                        onclick="openScannedDiagnosis('${escapeJs(
-                            data.equipment_id
-                        )}')"
-                    >
-                        🤖 AI Diagnosis
-                    </button>
+                        <button
+                            type="button"
+                            onclick="openScannedHealth('${escapeJs(data.equipment_id)}')"
+                        >
+                            ❤️ View Health
+                        </button>
+
+                        <button
+                            type="button"
+                            onclick="openScannedDiagnosis('${escapeJs(data.equipment_id)}')"
+                        >
+                            🤖 Diagnose
+                        </button>
+
+                    </div>
 
                 </div>
 
-            </div>
-        `;
+            `;
 
-    } catch (error) {
+        }
+
+
+        stopCamera();
+
+
+        showMessage(
+            `Equipment ${equipmentId} found.`
+        );
+
+    }
+
+    catch (error) {
 
         console.error(
             "Equipment scanner error:",
             error
         );
 
-        result.innerHTML = `
-            <div class="alert alert-danger">
 
-                ❌ Equipment not found.
+        if (result) {
 
-                <br><br>
+            result.innerHTML = `
+                <div class="alert alert-danger">
 
-                ${escapeHtml(
-                    error.message
-                )}
+                    ❌ Equipment not found.
 
-            </div>
-        `;
+                    <br><br>
+
+                    ${escapeHtml(error.message)}
+
+                </div>
+            `;
+
+        }
+
     }
+
 }
+
 
 // ==========================================================
 // SCANNER → EQUIPMENT HEALTH
 // ==========================================================
 
-function openScannedHealth(equipmentId) {
+function openScannedHealth(
+    equipmentId
+) {
 
     const selector =
         document.getElementById(
             "equipment-health-select"
         );
 
+
     if (!selector) {
         return;
     }
 
-    selector.value = equipmentId;
+
+    selector.value =
+        equipmentId;
+
 
     selector.dispatchEvent(
         new Event("change")
     );
 
-    selector.scrollIntoView({
-        behavior: "smooth",
-        block: "center"
-    });
+
+    selector.closest(".card")
+        ?.scrollIntoView({
+            behavior: "smooth",
+            block: "center"
+        });
+
 }
 
 
@@ -2241,103 +2227,131 @@ function openScannedHealth(equipmentId) {
 // SCANNER → AI DIAGNOSIS
 // ==========================================================
 
-function openScannedDiagnosis(equipmentId) {
+function openScannedDiagnosis(
+    equipmentId
+) {
 
     const selector =
         document.getElementById(
             "diagnosis-equipment"
         );
 
+
     if (!selector) {
         return;
     }
 
-    selector.value = equipmentId;
 
-    selector.scrollIntoView({
-        behavior: "smooth",
-        block: "center"
-    });
+    selector.value =
+        equipmentId;
+
+
+    const diagnosisSection =
+        document.querySelector(
+            ".diagnosis-section"
+        );
+
+
+    if (diagnosisSection) {
+
+        diagnosisSection.scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+        });
+
+    }
+
 }
 
 
 // ==========================================================
-// WORK ORDER MANAGEMENT
+// WORK ORDER ID
 // ==========================================================
 
+function generateWorkOrderId() {
 
-// ----------------------------------------------------------
+    return (
+        "WO-" +
+        Date.now()
+            .toString()
+            .slice(-8)
+    );
+
+}
+
+
+// ==========================================================
 // CREATE WORK ORDER
-// ----------------------------------------------------------
+// ==========================================================
 
 async function createWorkOrder() {
 
-    const workOrder = {
+    const workOrderIdInput =
+        document.getElementById(
+            "work-order-id"
+        );
 
-        work_order_id:
-            document.getElementById(
-                "work-order-id"
-            ).value.trim() ||
-            generateWorkOrderId(),
+    const equipmentInput =
+        document.getElementById(
+            "work-order-equipment"
+        );
 
-        equipment_id:
-            document.getElementById(
-                "work-order-equipment"
-            ).value.trim(),
+    const technicianInput =
+        document.getElementById(
+            "work-order-technician"
+        );
 
-        technician_id:
-            document.getElementById(
-                "work-order-technician"
-            ).value.trim() || null,
+    const typeInput =
+        document.getElementById(
+            "work-order-type"
+        );
 
-        work_type:
-            document.getElementById(
-                "work-order-type"
-            ).value,
+    const priorityInput =
+        document.getElementById(
+            "work-order-priority"
+        );
 
-        priority:
-            document.getElementById(
-                "work-order-priority"
-            ).value,
+    const descriptionInput =
+        document.getElementById(
+            "work-order-description"
+        );
 
-        description:
-            document.getElementById(
-                "work-order-description"
-            ).value.trim(),
+    const scheduledInput =
+        document.getElementById(
+            "work-order-scheduled"
+        );
 
-        scheduled_date:
-            document.getElementById(
-                "work-order-scheduled"
-            ).value || null,
-
-        due_date:
-            document.getElementById(
-                "work-order-due"
-            ).value || null,
-
-        completed_date: null,
-
-        status: "Open",
-
-        technician_notes: null,
-
-        created_at: null
-    };
+    const dueInput =
+        document.getElementById(
+            "work-order-due"
+        );
 
 
-    // Validation
-
-    if (!workOrder.work_order_id) {
+    if (
+        !equipmentInput ||
+        !typeInput ||
+        !priorityInput ||
+        !descriptionInput
+    ) {
 
         showMessage(
-            "Please enter a Work Order ID."
+            "Work Order form is incomplete."
         );
 
         return;
     }
 
 
-    if (!workOrder.equipment_id) {
+    const workOrderId =
+        workOrderIdInput?.value.trim() ||
+        generateWorkOrderId();
+
+
+    const equipmentId =
+        equipmentInput.value.trim();
+
+
+    if (!equipmentId) {
 
         showMessage(
             "Please enter an Equipment ID."
@@ -2347,14 +2361,36 @@ async function createWorkOrder() {
     }
 
 
-    if (!workOrder.description) {
+    const workOrder = {
 
-        showMessage(
-            "Please enter a Work Order description."
-        );
+        work_order_id:
+            workOrderId,
 
-        return;
-    }
+        equipment_id:
+            equipmentId,
+
+        technician_id:
+            technicianInput?.value.trim() ||
+            null,
+
+        work_type:
+            typeInput.value,
+
+        priority:
+            priorityInput.value,
+
+        description:
+            descriptionInput.value.trim(),
+
+        scheduled_date:
+            scheduledInput?.value ||
+            null,
+
+        due_date:
+            dueInput?.value ||
+            null
+
+    };
 
 
     try {
@@ -2371,7 +2407,9 @@ async function createWorkOrder() {
                     },
 
                     body:
-                        JSON.stringify(workOrder)
+                        JSON.stringify(
+                            workOrder
+                        )
                 }
             );
 
@@ -2386,97 +2424,62 @@ async function createWorkOrder() {
                 data.detail ||
                 "Work Order creation failed."
             );
+
         }
 
 
-        console.log(
-            "Work Order created:",
-            data
-        );
-
-
         showMessage(
-            "Work Order created successfully."
+            `Work Order ${workOrderId} created successfully.`
         );
 
 
-        // Clear form
-
-        document.getElementById(
-            "work-order-id"
-        ).value = "";
-
-        document.getElementById(
-            "work-order-equipment"
-        ).value = "";
-
-        document.getElementById(
-            "work-order-technician"
-        ).value = "";
-
-        document.getElementById(
-            "work-order-description"
-        ).value = "";
-
-        document.getElementById(
-            "work-order-scheduled"
-        ).value = "";
-
-        document.getElementById(
-            "work-order-due"
-        ).value = "";
+        if (workOrderIdInput) {
+            workOrderIdInput.value = "";
+        }
 
 
-        // Refresh
+        descriptionInput.value = "";
+
 
         await loadWorkOrders();
 
         await loadWorkOrderStatistics();
 
-        loadEquipmentHealth();
+        await loadDashboard();
 
     }
 
     catch (error) {
 
         console.error(
-            "Work Order error:",
+            "Work Order creation error:",
             error
         );
+
 
         showMessage(
             "Work Order error: " +
             error.message
         );
+
     }
-}
-
-// ==========================================================
-// GENERATE WORK ORDER ID — v3.4.0
-// ==========================================================
-
-function generateWorkOrderId() {
-
-    return (
-        "WO-" +
-        Date.now()
-            .toString()
-            .slice(-8)
-    );
 
 }
 
+
 // ==========================================================
-// LOAD WORK ORDERS — v3.4.2
+// LOAD WORK ORDERS
 // ==========================================================
 
 async function loadWorkOrders() {
 
     try {
 
-        const response = await fetch(
-            `${API_URL}/work-orders`
-        );
+        const response =
+            await fetch(
+                `${API_URL}/work-orders`
+            );
+
 
         if (!response.ok) {
 
@@ -2486,13 +2489,9 @@ async function loadWorkOrders() {
 
         }
 
+
         const workOrders =
             await response.json();
-
-        console.log(
-            "Work Orders:",
-            workOrders
-        );
 
 
         const container =
@@ -2524,7 +2523,10 @@ async function loadWorkOrders() {
         workOrders.forEach(order => {
 
             const card =
-                document.createElement("div");
+                document.createElement(
+                    "div"
+                );
+
 
             card.className =
                 "work-order-item";
@@ -2533,51 +2535,49 @@ async function loadWorkOrders() {
             card.innerHTML = `
 
                 <h3>
-                    🛠️ ${order.work_order_id}
+                    🛠️ ${escapeHtml(order.work_order_id)}
                 </h3>
 
                 <p>
                     <strong>Equipment:</strong>
-                    ${order.equipment_id ?? "N/A"}
+                    ${escapeHtml(order.equipment_id ?? "N/A")}
                 </p>
 
                 <p>
                     <strong>Technician:</strong>
-                    ${order.technician_id ?? "Unassigned"}
+                    ${escapeHtml(order.technician_id ?? "Unassigned")}
                 </p>
 
                 <p>
                     <strong>Type:</strong>
-                    ${order.work_type ?? "N/A"}
+                    ${escapeHtml(order.work_type ?? "N/A")}
                 </p>
 
                 <p>
                     <strong>Priority:</strong>
-                    ${order.priority ?? "N/A"}
+                    ${escapeHtml(order.priority ?? "N/A")}
                 </p>
 
                 <p>
                     <strong>Description:</strong>
-                    ${order.description ?? "N/A"}
+                    ${escapeHtml(order.description ?? "N/A")}
                 </p>
 
                 <p>
                     <strong>Scheduled:</strong>
-                    ${order.scheduled_date ?? "N/A"}
+                    ${escapeHtml(order.scheduled_date ?? "N/A")}
                 </p>
 
                 <p>
                     <strong>Due:</strong>
-                    ${order.due_date ?? "N/A"}
+                    ${escapeHtml(order.due_date ?? "N/A")}
                 </p>
 
                 <p>
                     <strong>Completed:</strong>
-                    ${order.completed_date ?? "Not completed"}
+                    ${escapeHtml(order.completed_date ?? "Not completed")}
                 </p>
 
-
-                <!-- STATUS -->
 
                 <div class="work-order-status-control">
 
@@ -2623,8 +2623,6 @@ async function loadWorkOrders() {
                 </div>
 
 
-                <!-- ACTIONS -->
-
                 <div class="work-order-actions">
 
                     <button
@@ -2640,7 +2638,9 @@ async function loadWorkOrders() {
             `;
 
 
-            container.appendChild(card);
+            container.appendChild(
+                card
+            );
 
         });
 
@@ -2661,8 +2661,9 @@ async function loadWorkOrders() {
 
 }
 
+
 // ==========================================================
-// UPDATE WORK ORDER STATUS — v3.4.2
+// UPDATE WORK ORDER STATUS
 // ==========================================================
 
 async function updateWorkOrderStatus(
@@ -2672,23 +2673,24 @@ async function updateWorkOrderStatus(
 
     try {
 
-        const response = await fetch(
-            `${API_URL}/work-orders/${encodeURIComponent(
-                workOrderId
-            )}/status`,
-            {
-                method: "PUT",
+        const response =
+            await fetch(
+                `${API_URL}/work-orders/${encodeURIComponent(workOrderId)}/status`,
+                {
+                    method: "PUT",
 
-                headers: {
-                    "Content-Type":
-                        "application/json"
-                },
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
 
-                body: JSON.stringify({
-                    status: status
-                })
-            }
-        );
+                    body:
+                        JSON.stringify({
+                            status:
+                                status
+                        })
+                }
+            );
 
 
         const data =
@@ -2703,12 +2705,6 @@ async function updateWorkOrderStatus(
             );
 
         }
-
-
-        console.log(
-            "Work Order status updated:",
-            data
-        );
 
 
         showMessage(
@@ -2731,10 +2727,12 @@ async function updateWorkOrderStatus(
             error
         );
 
+
         showMessage(
             "Status update error: " +
             error.message
         );
+
 
         await loadWorkOrders();
 
@@ -2742,8 +2740,9 @@ async function updateWorkOrderStatus(
 
 }
 
+
 // ==========================================================
-// DELETE WORK ORDER — v3.4.2
+// DELETE WORK ORDER
 // ==========================================================
 
 async function deleteWorkOrder(
@@ -2765,9 +2764,7 @@ async function deleteWorkOrder(
 
         const response =
             await fetch(
-                `${API_URL}/work-orders/${encodeURIComponent(
-                    workOrderId
-                )}`,
+                `${API_URL}/work-orders/${encodeURIComponent(workOrderId)}`,
                 {
                     method: "DELETE"
                 }
@@ -2808,6 +2805,7 @@ async function deleteWorkOrder(
             error
         );
 
+
         showMessage(
             "Delete error: " +
             error.message
@@ -2818,9 +2816,9 @@ async function deleteWorkOrder(
 }
 
 
-// ----------------------------------------------------------
+// ==========================================================
 // WORK ORDER STATISTICS
-// ----------------------------------------------------------
+// ==========================================================
 
 async function loadWorkOrderStatistics() {
 
@@ -2837,17 +2835,12 @@ async function loadWorkOrderStatistics() {
             throw new Error(
                 `Statistics request failed: ${response.status}`
             );
+
         }
 
 
         const data =
             await response.json();
-
-
-        console.log(
-            "Work Order statistics:",
-            data
-        );
 
 
         const total =
@@ -2859,6 +2852,7 @@ async function loadWorkOrderStatistics() {
 
             total.textContent =
                 data.total_work_orders ?? 0;
+
         }
 
 
@@ -2871,6 +2865,7 @@ async function loadWorkOrderStatistics() {
 
             open.textContent =
                 data.open_work_orders ?? 0;
+
         }
 
 
@@ -2883,6 +2878,7 @@ async function loadWorkOrderStatistics() {
 
             inProgress.textContent =
                 data.in_progress_work_orders ?? 0;
+
         }
 
 
@@ -2895,6 +2891,7 @@ async function loadWorkOrderStatistics() {
 
             completed.textContent =
                 data.completed_work_orders ?? 0;
+
         }
 
 
@@ -2907,12 +2904,8 @@ async function loadWorkOrderStatistics() {
 
             highPriority.textContent =
                 data.high_priority_work_orders ?? 0;
+
         }
-
-
-        console.log(
-            "Work Order statistics loaded successfully."
-        );
 
     }
 
@@ -2926,7 +2919,9 @@ async function loadWorkOrderStatistics() {
         showMessage(
             "Could not load Work Order statistics."
         );
+
     }
+
 }
 
 
@@ -2939,14 +2934,16 @@ function showEquipmentMessage() {
     showMessage(
         "Equipment management is ready."
     );
+
 }
 
 
 function showDiagnosisMessage() {
 
     showMessage(
-        "Diagnosis module coming next."
+        "AI Diagnosis is ready."
     );
+
 }
 
 
@@ -2955,35 +2952,77 @@ function showAnalyticsMessage() {
     showMessage(
         "Analytics module coming next."
     );
+
 }
 
 
 // ==========================================================
-// START APPLICATION
+// EQUIPMENT FORM EVENT
+// ==========================================================
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function() {
+
+        const equipmentForm =
+            document.getElementById(
+                "equipmentForm"
+            );
+
+
+        if (equipmentForm) {
+
+            equipmentForm.addEventListener(
+                "submit",
+                saveEquipment
+            );
+
+        }
+
+    }
+);
+
+
+// ==========================================================
+// CLEANUP CAMERA
+// ==========================================================
+
+window.addEventListener(
+    "beforeunload",
+    function() {
+
+        stopCamera();
+
+    }
+);
+
+
+// ==========================================================
+// APPLICATION START
 // ==========================================================
 
 window.addEventListener(
     "DOMContentLoaded",
-    () => {
+    async function() {
 
         console.log(
-            "FuElectric-AI frontend started."
+            "⚡ FuElectric-AI v3.4.5 frontend started."
         );
 
 
-        loadDashboard();
+        await loadDashboard();
 
-        loadEquipment();
+        await loadEquipment();
 
-        loadWorkOrders();
+        await loadWorkOrders();
 
-        loadWorkOrderStatistics();
+        await loadWorkOrderStatistics();
 
         loadEquipmentHealth();
 
-        loadDiagnosisEquipment();
+        await loadDiagnosisEquipment();
 
-        loadMaintenanceAlerts();
+        await loadMaintenanceAlerts();
 
     }
 );

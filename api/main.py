@@ -60,6 +60,7 @@ from database.database import (
     get_work_orders_by_equipment,
     get_work_orders_by_technician,
     update_work_order,
+    update_work_order_status,
     delete_work_order,
     get_work_order_statistics,
 
@@ -790,138 +791,57 @@ def edit_work_order(
 
 
 # ==========================================================
-# UPDATE WORK ORDER STATUS — v3.1
+# UPDATE WORK ORDER STATUS — FuElectric-AI v3.4.4
 # ==========================================================
 
-@app.put(
-        
-    "/work-orders/{work_order_id}/status"
-)
-def update_work_order_status(
+@app.put("/work-orders/{work_order_id}/status")
+def change_work_order_status(
     work_order_id: str,
     status_update: WorkOrderStatusUpdate
 ):
 
-    allowed_statuses = [
-        "Open",
-        "In Progress",
-        "Completed",
-        "Cancelled"
-    ]
+    existing = get_work_order_by_id(
+        work_order_id
+    )
 
-    status = status_update.status
+    if existing is None:
 
-    if status not in allowed_statuses:
+        raise HTTPException(
+            status_code=404,
+            detail="Work order not found."
+        )
+
+    success = update_work_order_status(
+        work_order_id,
+        status_update.status
+    )
+
+    if not success:
 
         raise HTTPException(
             status_code=400,
             detail=(
                 "Invalid status. "
                 "Allowed statuses: "
-                + ", ".join(allowed_statuses)
+                "Open, Assigned, In Progress, "
+                "Completed, Cancelled"
             )
         )
 
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    # Find work order
-    cursor.execute(
-        """
-        SELECT *
-        FROM work_orders
-        WHERE work_order_id = ?
-        """,
-        (work_order_id,)
+    updated_work_order = get_work_order_by_id(
+        work_order_id
     )
-
-    work_order = cursor.fetchone()
-
-    if not work_order:
-
-        conn.close()
-
-        raise HTTPException(
-            status_code=404,
-            detail="Work Order not found."
-        )
-
-    # Update status
-    cursor.execute(
-        """
-        UPDATE work_orders
-        SET status = ?
-        WHERE work_order_id = ?
-        """,
-        (
-            status,
-            work_order_id
-        )
-    )
-
-    # Completion date
-    if status == "Completed":
-
-        completed_date = (
-            datetime.now().strftime(
-                "%Y-%m-%d"
-            )
-        )
-
-        cursor.execute(
-            """
-            UPDATE work_orders
-            SET completed_date = ?
-            WHERE work_order_id = ?
-            """,
-            (
-                completed_date,
-                work_order_id
-            )
-        )
-
-    else:
-
-        cursor.execute(
-            """
-            UPDATE work_orders
-            SET completed_date = NULL
-            WHERE work_order_id = ?
-            """,
-            (work_order_id,)
-        )
-
-    conn.commit()
-
-    # Get updated record
-    cursor.execute(
-        """
-        SELECT *
-        FROM work_orders
-        WHERE work_order_id = ?
-        """,
-        (work_order_id,)
-    )
-
-    updated_work_order = cursor.fetchone()
-
-    conn.close()
 
     return {
-        "message": "Work Order status updated successfully.",
-        "work_order": dict(
-            updated_work_order
-        )
+        "message": "Work order status updated successfully.",
+        "work_order": updated_work_order
     }
 
-
 # ==========================================================
-# DELETE WORK ORDER
+# DELETE WORK ORDER — FuElectric-AI v3.4.4
 # ==========================================================
 
-@app.delete(
-    "/work-orders/{work_order_id}"
-)
+@app.delete("/work-orders/{work_order_id}")
 def remove_work_order(
     work_order_id: str
 ):

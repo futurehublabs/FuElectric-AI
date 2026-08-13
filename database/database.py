@@ -1530,6 +1530,55 @@ def update_work_order(work_order_id: str, work_order):
 
         conn.close()
 
+def update_work_order_status(
+    work_order_id: str,
+    status: str
+):
+    """
+    Update the status of a work order.
+    """
+
+    allowed_statuses = [
+        "Open",
+        "Assigned",
+        "In Progress",
+        "Completed",
+        "Cancelled"
+    ]
+
+    if status not in allowed_statuses:
+        return False
+
+    conn = get_connection()
+
+    try:
+
+        completed_date = None
+
+        if status == "Completed":
+            completed_date = datetime.now().strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
+
+        conn.execute("""
+            UPDATE work_orders
+            SET
+                status = ?,
+                completed_date = ?
+            WHERE work_order_id = ?
+        """, (
+            status,
+            completed_date,
+            work_order_id
+        ))
+
+        conn.commit()
+
+        return True
+
+    finally:
+
+        conn.close()
 
 def delete_work_order(work_order_id: str) -> bool:
     """

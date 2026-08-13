@@ -613,7 +613,7 @@
 </section>
 
 <!-- ==================================================
-     EQUIPMENT SCANNER — v3.4.4
+     EQUIPMENT CAMERA SCANNER — v3.4.5
      ================================================== -->
 
 <section class="scanner-section">
@@ -621,26 +621,119 @@
     <h2>📷 Equipment Scanner</h2>
 
     <p>
-        Scan or enter an Equipment ID to quickly retrieve
-        registered equipment information.
+        Scan an Equipment ID using your camera or enter
+        the Equipment ID manually.
     </p>
 
-    <div class="scanner-form">
 
-        <input
-            type="text"
-            id="scanner-equipment-id"
-            placeholder="Enter Equipment ID e.g. AC-006"
+    <!-- ==================================================
+         CAMERA SCANNER
+         ================================================== -->
+
+    <div class="camera-scanner">
+
+        <h3>📷 Camera Scanner</h3>
+
+        <div class="camera-preview-container">
+
+            <video
+                id="camera-preview"
+                autoplay
+                playsinline
+            ></video>
+
+            <div
+                id="camera-overlay"
+                class="camera-overlay"
+            >
+                <span>
+                    Position Equipment ID inside the frame
+                </span>
+            </div>
+
+        </div>
+
+
+        <!-- CAMERA STATUS -->
+
+        <p
+            id="camera-status"
+            class="camera-status"
         >
+            Camera is not active.
+        </p>
+
+
+        <!-- CAMERA CONTROLS -->
+
+        <div class="camera-controls">
+
+            <button
+                type="button"
+                onclick="startCamera()"
+            >
+                ▶ Start Camera
+            </button>
+
+
+            <button
+                type="button"
+                onclick="stopCamera()"
+            >
+                ⏹ Stop Camera
+            </button>
+
+        </div>
+
+
+        <!-- SCAN BUTTON -->
 
         <button
             type="button"
-            onclick="scanEquipment()"
+            class="primary-btn"
+            onclick="scanCamera()"
         >
-            🔍 Find Equipment
+            🔍 Scan Equipment ID
         </button>
 
     </div>
+
+
+    <hr>
+
+
+    <!-- ==================================================
+         MANUAL EQUIPMENT SEARCH
+         ================================================== -->
+
+    <div class="manual-scanner">
+
+        <h3>⌨️ Manual Equipment Search</h3>
+
+        <div class="scanner-form">
+
+            <input
+                type="text"
+                id="scanner-equipment-id"
+                placeholder="Enter Equipment ID e.g. AC-006"
+            >
+
+
+            <button
+                type="button"
+                onclick="scanEquipment()"
+            >
+                🔍 Find Equipment
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- ==================================================
+         SCANNER RESULT
+         ================================================== -->
 
     <div
         id="scanner-result"
@@ -648,12 +741,14 @@
     >
 
         <p>
-            Enter an Equipment ID to begin.
+            Start the camera or enter an Equipment ID
+            to begin.
         </p>
 
     </div>
 
 </section>
+
 
     <!-- ==================================================
          WORK ORDER MANAGEMENT — v3.1
