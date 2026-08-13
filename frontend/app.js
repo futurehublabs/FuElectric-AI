@@ -2030,6 +2030,238 @@ function createWorkOrderFromDiagnosis(
 }
 
 // ==========================================================
+// EQUIPMENT SCANNER — v3.4.4
+// ==========================================================
+
+async function scanEquipment() {
+
+
+    const input =
+        document.getElementById(
+            "scanner-equipment-id"
+        );
+
+    const result =
+        document.getElementById(
+            "scanner-result"
+        );
+
+    if (!input || !result) {
+        return;
+    }
+
+    const equipmentId =
+        input.value.trim();
+
+    if (!equipmentId) {
+
+        result.innerHTML = `
+            <div class="alert alert-warning">
+                ⚠️ Please enter an Equipment ID.
+            </div>
+        `;
+
+        return;
+    }
+
+    result.innerHTML = `
+        <div class="alert alert-info">
+            🔄 Searching for equipment...
+        </div>
+    `;
+
+    try {
+
+        const response =
+            await fetch(
+                `${API_URL}/equipment/${encodeURIComponent(
+                    equipmentId
+                )}`
+            );
+
+        const data =
+            await response.json();
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.detail ||
+                "Equipment not found."
+            );
+        }
+
+        result.innerHTML = `
+
+            <div class="scanner-equipment-card">
+
+                <h3>
+                    ✅ Equipment Found
+                </h3>
+
+                <p>
+                    <strong>Equipment ID:</strong>
+                    ${escapeHtml(
+                        data.equipment_id || ""
+                    )}
+                </p>
+
+                <p>
+                    <strong>Name:</strong>
+                    ${escapeHtml(
+                        data.name || "-"
+                    )}
+                </p>
+
+                <p>
+                    <strong>Category:</strong>
+                    ${escapeHtml(
+                        data.category || "-"
+                    )}
+                </p>
+
+                <p>
+                    <strong>Manufacturer:</strong>
+                    ${escapeHtml(
+                        data.manufacturer || "-"
+                    )}
+                </p>
+
+                <p>
+                    <strong>Model:</strong>
+                    ${escapeHtml(
+                        data.model || "-"
+                    )}
+                </p>
+
+                <p>
+                    <strong>Serial Number:</strong>
+                    ${escapeHtml(
+                        data.serial_number || "-"
+                    )}
+                </p>
+
+                <p>
+                    <strong>Location:</strong>
+                    ${escapeHtml(
+                        data.location || "-"
+                    )}
+                </p>
+
+                <p>
+                    <strong>Status:</strong>
+                    ${escapeHtml(
+                        data.status || "-"
+                    )}
+                </p>
+
+                <p>
+                    <strong>Installation Date:</strong>
+                    ${escapeHtml(
+                        data.installation_date || "-"
+                    )}
+                </p>
+
+                <div class="scanner-actions">
+
+                    <button
+                        type="button"
+                        onclick="openScannedHealth('${escapeJs(
+                            data.equipment_id
+                        )}')"
+                    >
+                        ❤️ Equipment Health
+                    </button>
+
+                    <button
+                        type="button"
+                        onclick="openScannedDiagnosis('${escapeJs(
+                            data.equipment_id
+                        )}')"
+                    >
+                        🤖 AI Diagnosis
+                    </button>
+
+                </div>
+
+            </div>
+        `;
+
+    } catch (error) {
+
+        console.error(
+            "Equipment scanner error:",
+            error
+        );
+
+        result.innerHTML = `
+            <div class="alert alert-danger">
+
+                ❌ Equipment not found.
+
+                <br><br>
+
+                ${escapeHtml(
+                    error.message
+                )}
+
+            </div>
+        `;
+    }
+}
+
+// ==========================================================
+// SCANNER → EQUIPMENT HEALTH
+// ==========================================================
+
+function openScannedHealth(equipmentId) {
+
+    const selector =
+        document.getElementById(
+            "equipment-health-select"
+        );
+
+    if (!selector) {
+        return;
+    }
+
+    selector.value = equipmentId;
+
+    selector.dispatchEvent(
+        new Event("change")
+    );
+
+    selector.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+    });
+}
+
+
+// ==========================================================
+// SCANNER → AI DIAGNOSIS
+// ==========================================================
+
+function openScannedDiagnosis(equipmentId) {
+
+    const selector =
+        document.getElementById(
+            "diagnosis-equipment"
+        );
+
+    if (!selector) {
+        return;
+    }
+
+    selector.value = equipmentId;
+
+    selector.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+    });
+}
+
+
+// ==========================================================
 // WORK ORDER MANAGEMENT
 // ==========================================================
 
