@@ -4,7 +4,6 @@
 
 <head>
 
-```
 <meta charset="UTF-8">
 
 <meta
@@ -14,11 +13,24 @@
 
 <title>FuElectric-AI</title>
 
-<link
-    rel="stylesheet"
-    href="style.css"
->
-```
+<style>
+*{box-sizing:border-box}:root{--bg:#eef3f8;--panel:#fff;--ink:#172033;--muted:#667085;--line:#dbe3ee;--primary:#1d4ed8;--danger:#b91c1c;--success:#166534}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}.app{min-height:100vh}
+header{background:#101827;color:#fff;padding:26px 5%;box-shadow:0 2px 12px rgba(0,0,0,.12)}header h1{margin:0 0 5px;font-size:32px}header p{margin:0;color:#cbd5e1}
+main{width:min(1400px,94%);margin:24px auto 60px}section,.panel,.work-order-intelligence-section{background:var(--panel);border-radius:16px;padding:24px;margin-bottom:22px;box-shadow:0 4px 18px rgba(15,23,42,.07)}h2{margin-top:0;color:#13213a}h3{margin-top:0}
+.welcome{border-left:5px solid var(--primary)}.dashboard,.work-order-stats,.intelligence-cards,.maintenance-alert-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px}
+.card,.intelligence-card{background:#f7f9fc;border:1px solid var(--line);border-radius:12px;padding:18px;text-align:center}.card h3,.intelligence-card h3{font-size:16px;margin-bottom:8px}.card p,.intelligence-card p{font-size:30px;font-weight:700;margin:5px 0}
+.actions{display:flex;flex-wrap:wrap;gap:10px}.actions button,button{border:0;border-radius:9px;padding:10px 15px;background:var(--primary);color:#fff;cursor:pointer;font-weight:600}.secondary-btn{background:#475569}.danger-btn{background:#b91c1c}.action-btn{padding:7px 10px;font-size:12px;margin:2px}.primary-btn{background:var(--primary)}
+input,select,textarea{width:100%;padding:11px 12px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;font:inherit;margin:6px 0 12px}textarea{min-height:110px;resize:vertical}.equipment-tools,.scanner-form,.work-order-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;align-items:center}.section-header{display:flex;justify-content:space-between;gap:20px;align-items:center;flex-wrap:wrap}.table-container{width:100%;overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:760px}th,td{padding:11px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{background:#f8fafc;color:#334155}.actions-cell{white-space:nowrap}.badge{display:inline-block;padding:4px 9px;border-radius:999px;background:#e0e7ff;color:#3730a3;font-size:12px;font-weight:700}
+.maintenance-alert-card,.overdue-work-order,.work-order-item,.scanner-result-card,.diagnosis-card{border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0;background:#fff}.maintenance-alert-card{border-left:5px solid #f59e0b}.overdue-work-order{border-left:5px solid #dc2626;background:#fff7f7}.work-order-item{border-left:5px solid #2563eb}.maintenance-action{background:#fffbeb;border-radius:8px;padding:10px;margin:10px 0}
+.intelligence-cards{margin-bottom:18px}.intelligence-panel{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px;margin:15px 0;overflow-x:auto}.intelligence-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:18px}.performance-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}.performance-grid div{background:#f8fafc;border:1px solid var(--line);padding:14px;border-radius:10px}.performance-grid span{display:block;font-size:24px;font-weight:700;margin-top:5px}
+.loading{color:var(--muted)}.success{padding:12px;background:#ecfdf3;color:var(--success);border-radius:9px}.error{padding:12px;background:#fef2f2;color:var(--danger);border-radius:9px}.info{padding:12px;background:#eff6ff;color:#1e40af;border-radius:9px}.message{display:none;padding:12px;border-radius:9px;background:#e0f2fe;color:#075985}.message.visible{display:block}.status{display:inline-block;padding:8px 13px;border-radius:999px;background:#e5e7eb;color:#374151;font-weight:700}.status.online{background:#dcfce7;color:#166534}.status.offline{background:#fee2e2;color:#991b1b}
+.modal{display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);align-items:center;justify-content:center;padding:20px;z-index:50}.modal-content{background:#fff;border-radius:16px;width:min(700px,100%);max-height:90vh;overflow:auto;padding:24px;position:relative}.close-btn{position:absolute;right:18px;top:10px;font-size:30px;cursor:pointer}
+.diagnosis-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:15px 0}.diagnosis-summary>div{background:#f8fafc;border:1px solid var(--line);border-radius:8px;padding:10px}.diagnosis-emergency{padding:14px;background:#fee2e2;color:#991b1b;border-radius:10px;font-weight:700}.diagnosis-normal{padding:14px;background:#ecfdf3;color:#166534;border-radius:10px}
+.camera-preview-container{position:relative;max-width:720px;margin:auto;background:#0f172a;border-radius:12px;overflow:hidden;min-height:260px}.camera-preview-container video{width:100%;display:block;min-height:260px;object-fit:cover}.camera-overlay{position:absolute;inset:20% 15%;border:3px dashed #fff;border-radius:12px;display:flex;align-items:flex-end;justify-content:center;color:#fff;padding:12px;text-align:center;background:rgba(0,0,0,.08)}.camera-controls{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}.camera-status{font-weight:600}
+footer{background:#101827;color:#cbd5e1;text-align:center;padding:24px}pre{white-space:pre-wrap;word-break:break-word;background:#111827;color:#e5e7eb;padding:14px;border-radius:9px;overflow:auto}@media(max-width:700px){header h1{font-size:25px}main{width:96%}.intelligence-grid{grid-template-columns:1fr}.card p,.intelligence-card p{font-size:25px}}
+</style>
 
 </head>
 
@@ -26,7 +38,6 @@
 
 <div class="app">
 
-```
 <!-- ==================================================
      HEADER
      ================================================== -->
@@ -43,6 +54,11 @@
 
 
 <main>
+
+    <section class="system-status-section">
+        <h2>🖥️ System Status</h2>
+        <span id="system-status" class="status">Checking backend...</span>
+    </section>
 
 
     <!-- ==================================================
@@ -833,6 +849,174 @@
 
         </div>
 
+    <!-- ==========================================================
+     WORK ORDER INTELLIGENCE — FuElectric-AI v3.5.1
+========================================================== -->
+
+<section class="work-order-intelligence">
+
+    <h2>🧠 Work Order Intelligence</h2>
+
+    <!-- WORK ORDER OVERVIEW -->
+    <div class="intelligence-cards">
+
+        <div class="intelligence-card">
+            <h3>Total Work Orders</h3>
+            <p id="wo-total">0</p>
+        </div>
+
+        <div class="intelligence-card">
+            <h3>Open</h3>
+            <p id="wo-open">0</p>
+        </div>
+
+        <div class="intelligence-card">
+            <h3>Assigned</h3>
+            <p id="wo-assigned">0</p>
+        </div>
+
+        <div class="intelligence-card">
+            <h3>In Progress</h3>
+            <p id="wo-progress">0</p>
+        </div>
+
+        <div class="intelligence-card">
+            <h3>Completed</h3>
+            <p id="wo-completed">0</p>
+        </div>
+
+        <div class="intelligence-card">
+            <h3>Cancelled</h3>
+            <p id="wo-cancelled">0</p>
+        </div>
+
+    </div>
+
+
+    <!-- PERFORMANCE -->
+    <div class="intelligence-panel">
+
+        <h3>📊 Work Order Performance</h3>
+
+        <div id="wo-performance">
+            Loading performance...
+        </div>
+
+    </div>
+
+
+    <!-- OVERDUE -->
+    <div class="intelligence-panel">
+
+        <h3>⚠️ Overdue Work Orders</h3>
+
+        <div id="wo-overdue">
+            Loading overdue work orders...
+        </div>
+
+    </div>
+
+
+    <!-- TECHNICIAN WORKLOAD -->
+    <div class="intelligence-panel">
+
+        <h3>👨‍🔧 Technician Workload</h3>
+
+        <div id="wo-workload">
+            Loading technician workload...
+        </div>
+
+    </div>
+
+
+    <!-- AI INSIGHTS -->
+    <div class="intelligence-panel">
+
+        <h3>🤖 FuElectric-AI Insights</h3>
+
+        <div id="wo-ai-insights">
+            Analyzing work-order data...
+        </div>
+
+    </div>
+
+</section>
+
+<!-- ======================================================
+     TECHNICIAN WORKLOAD INTELLIGENCE — v3.5.5
+====================================================== -->
+
+<div class="intelligence-panel">
+
+    <h3>
+        👨‍🔧 Technician Workload Intelligence
+    </h3>
+
+    <div id="technician-workload-intelligence">
+
+        Loading technician workload intelligence...
+
+    </div>
+
+</div>
+
+    <!-- ==================================================
+         TECHNICIAN WORKLOAD
+         ================================================== -->
+
+    <div class="work-order-intelligence-section">
+
+        <h3>
+            👨‍🔧 Technician Workload
+        </h3>
+
+        <div
+            id="technician-workload-list"
+        >
+
+            <p>
+                Loading technician workload...
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- ==================================================
+         OVERDUE WORK ORDERS
+         ================================================== -->
+
+    <div class="work-order-intelligence-section">
+
+        <h3>
+            ⚠️ Overdue Work Orders
+        </h3>
+
+        <div
+            id="overdue-work-order-list"
+        >
+
+            <p>
+                Loading overdue work orders...
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- REFRESH INTELLIGENCE -->
+
+    <button
+        type="button"
+        onclick="loadWorkOrderIntelligence()"
+    >
+        🧠 Refresh Work Order Intelligence
+    </button>
+
+</section>
+
 
         <!-- CREATE WORK ORDER -->
 
@@ -980,11 +1164,10 @@
 <footer>
 
     <p>
-        FuElectric-AI v3.1
+        FuElectric-AI v3.5.1
     </p>
 
 </footer>
-```
 
 </div>
 

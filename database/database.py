@@ -1673,3 +1673,467 @@ def get_work_order_statistics():
     finally:
 
         conn.close()
+
+# ==========================================================
+# WORK ORDER INTELLIGENCE — FuElectric-AI v3.5.0
+# ==========================================================
+
+
+def get_overdue_work_orders():
+    """
+    Return work orders whose due date has passed
+    and which are not completed or cancelled.
+    """
+
+    conn = get_connection()
+
+    try:
+
+        now = datetime.now().strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+
+        cursor = conn.execute("""
+            SELECT
+                work_order_id,
+                equipment_id,
+                technician_id,
+                work_type,
+                priority,
+                description,
+                scheduled_date,
+                due_date,
+                status,
+                technician_notes,
+                created_at
+            FROM work_orders
+            WHERE
+                due_date IS NOT NULL
+                AND due_date != ''
+                AND due_date < ?
+                AND status NOT IN (
+                    'Completed',
+                    'Cancelled'
+                )
+            ORDER BY due_date ASC
+        """, (now,))
+
+        work_orders = cursor.fetchall()
+
+        return [
+            dict(row)
+            for row in work_orders
+        ]
+
+    finally:
+
+        conn.close()
+
+
+def get_work_order_workload():
+    """
+    Return work-order workload grouped by technician.
+    """
+
+    conn = get_connection()
+
+    try:
+
+        cursor = conn.execute("""
+            SELECT
+                technician_id,
+
+                COUNT(*) AS total_orders,
+
+                SUM(
+                    CASE
+                        WHEN status = 'Open'
+                        THEN 1 ELSE 0
+                    END
+                ) AS open_orders,
+
+                SUM(
+                    CASE
+                        WHEN status = 'Assigned'
+                        THEN 1 ELSE 0
+                    END
+                ) AS assigned_orders,
+
+                SUM(
+                    CASE
+                        WHEN status = 'In Progress'
+                        THEN 1 ELSE 0
+                    END
+                ) AS in_progress_orders,
+
+                SUM(
+                    CASE
+                        WHEN status = 'Completed'
+                        THEN 1 ELSE 0
+                    END
+                ) AS completed_orders,
+
+                SUM(
+                    CASE
+                        WHEN priority = 'Critical'
+                        THEN 1 ELSE 0
+                    END
+                ) AS critical_orders,
+
+                SUM(
+                    CASE
+                        WHEN priority = 'High'
+                        THEN 1 ELSE 0
+                    END
+                ) AS high_priority_orders
+
+            FROM work_orders
+
+            WHERE technician_id IS NOT NULL
+
+            GROUP BY technician_id
+
+            ORDER BY total_orders DESC
+        """)
+
+        workload = cursor.fetchall()
+
+        return [
+            dict(row)
+            for row in workload
+        ]
+
+    finally:
+
+        conn.close()
+
+# ==========================================================
+# TECHNICIAN WORKLOAD INTELLIGENCE — FuElectric-AI v3.5.5
+# ==========================================================
+
+def get_technician_workload_intelligence():
+    """
+    Analyze technician workload and classify workload risk.
+
+    FuElectric-AI v3.5.5
+    """
+
+    conn = get_connection()
+
+    try:
+
+        cursor = conn.execute("""
+            SELECT
+                technician_id,
+
+                COUNT(*) AS total_orders,
+
+                SUM(
+                    CASE
+                        WHEN status = 'Open'
+                        THEN 1 ELSE 0
+                    END
+                ) AS open_orders,
+
+                SUM(
+                    CASE
+                        WHEN status = 'Assigned'
+                        THEN 1 ELSE 0
+                    END
+                ) AS assigned_orders,
+
+                SUM(
+                    CASE
+                        WHEN status = 'In Progress'
+                        THEN 1 ELSE 0
+                    END
+                ) AS in_progress_orders,
+
+                SUM(
+                    CASE
+                        WHEN status = 'Completed'
+                        THEN 1 ELSE 0
+                    END
+                ) AS completed_orders,
+
+                SUM(
+                    CASE
+                        WHEN priority = 'Critical'
+                        THEN 1 ELSE 0
+                    END
+                ) AS critical_orders,
+
+                SUM(
+                    CASE
+                        WHEN priority = 'High'
+                        THEN 1 ELSE 0
+                    END
+                ) AS high_priority_orders
+
+            FROM work_orders
+
+            WHERE technician_id IS NOT NULL
+
+            GROUP BY technician_id
+
+            ORDER BY total_orders DESC
+        """)
+
+        technicians = cursor.fetchall()
+
+        results = []
+
+        for row in technicians:
+
+            data = dict(row)
+
+            total_orders = data["total_orders"] or 0
+            open_orders = data["open_orders"] or 0
+            assigned_orders = data["assigned_orders"] or 0
+            in_progress_orders = data["in_progress_orders"] or 0
+            critical_orders = data["critical_orders"] or 0
+            high_priority_orders = data["high_priority_orders"] or 0
+
+            # --------------------------------------------------
+            # ACTIVE WORKLOAD
+            # --------------------------------------------------
+
+            active_orders = (
+                open_orders
+                + assigned_orders
+                + in_progress_orders
+            )
+
+            # --------------------------------------------------
+            # WORKLOAD SCORE
+            # --------------------------------------------------
+
+            workload_score = (
+                active_orders * 10
+                + critical_orders * 15
+                + high_priority_orders * 8
+            )
+
+            # --------------------------------------------------
+            # WORKLOAD CLASSIFICATION
+            # --------------------------------------------------
+
+            if workload_score >= 80:
+
+                workload_status = "Overloaded"
+
+            elif workload_score >= 50:
+
+                workload_status = "Heavy"
+
+            elif workload_score >= 25:
+
+                workload_status = "Moderate"
+
+            else:
+
+                workload_status = "Normal"
+
+            # --------------------------------------------------
+            # RISK LEVEL
+            # --------------------------------------------------
+
+            if (
+                critical_orders >= 2
+                or workload_score >= 80
+            ):
+
+                risk_level = "High"
+
+            elif (
+                critical_orders >= 1
+                or workload_score >= 50
+            ):
+
+                risk_level = "Medium"
+
+            else:
+
+                risk_level = "Low"
+
+            # --------------------------------------------------
+            # RECOMMENDATION
+            # --------------------------------------------------
+
+            if workload_status == "Overloaded":
+
+                recommendation = (
+                    "Technician workload is overloaded. "
+                    "Consider redistributing active work orders."
+                )
+
+            elif workload_status == "Heavy":
+
+                recommendation = (
+                    "Technician has a heavy workload. "
+                    "Monitor workload and priority assignments."
+                )
+
+            elif workload_status == "Moderate":
+
+                recommendation = (
+                    "Technician workload is moderate. "
+                    "Continue monitoring active assignments."
+                )
+
+            else:
+
+                recommendation = (
+                    "Technician workload is within normal range."
+                )
+
+            results.append({
+
+                "technician_id":
+                    data["technician_id"],
+
+                "total_orders":
+                    total_orders,
+
+                "active_orders":
+                    active_orders,
+
+                "open_orders":
+                    open_orders,
+
+                "assigned_orders":
+                    assigned_orders,
+
+                "in_progress_orders":
+                    in_progress_orders,
+
+                "completed_orders":
+                    data["completed_orders"] or 0,
+
+                "critical_orders":
+                    critical_orders,
+
+                "high_priority_orders":
+                    high_priority_orders,
+
+                "workload_score":
+                    workload_score,
+
+                "workload_status":
+                    workload_status,
+
+                "risk_level":
+                    risk_level,
+
+                "recommendation":
+                    recommendation
+
+            })
+
+        return results
+
+    finally:
+
+        conn.close()
+
+def get_work_order_performance():
+    """
+    Return overall work-order performance metrics.
+    """
+
+    conn = get_connection()
+
+    try:
+
+        total = conn.execute("""
+            SELECT COUNT(*)
+            FROM work_orders
+        """).fetchone()[0]
+
+        completed = conn.execute("""
+            SELECT COUNT(*)
+            FROM work_orders
+            WHERE status = 'Completed'
+        """).fetchone()[0]
+
+        overdue = conn.execute("""
+            SELECT COUNT(*)
+            FROM work_orders
+            WHERE
+                due_date IS NOT NULL
+                AND due_date != ''
+                AND due_date < ?
+                AND status NOT IN (
+                    'Completed',
+                    'Cancelled'
+                )
+        """, (
+            datetime.now().strftime(
+                "%Y-%m-%d %H:%M:%S"
+            ),
+        )).fetchone()[0]
+
+        active = conn.execute("""
+            SELECT COUNT(*)
+            FROM work_orders
+            WHERE status IN (
+                'Open',
+                'Assigned',
+                'In Progress'
+            )
+        """).fetchone()[0]
+
+        cancelled = conn.execute("""
+            SELECT COUNT(*)
+            FROM work_orders
+            WHERE status = 'Cancelled'
+        """).fetchone()[0]
+
+        if total > 0:
+
+            completion_rate = round(
+                (completed / total) * 100,
+                2
+            )
+
+            active_rate = round(
+                (active / total) * 100,
+                2
+            )
+
+        else:
+
+            completion_rate = 0
+            active_rate = 0
+
+        return {
+            "total_work_orders": total,
+            "completed_work_orders": completed,
+            "active_work_orders": active,
+            "overdue_work_orders": overdue,
+            "cancelled_work_orders": cancelled,
+            "completion_rate": completion_rate,
+            "active_rate": active_rate
+        }
+
+    finally:
+
+        conn.close()
+
+
+def get_work_order_intelligence():
+    """
+    Return a unified Work Order Intelligence report.
+    """
+
+    performance = get_work_order_performance()
+
+    overdue = get_overdue_work_orders()
+
+    workload = get_work_order_workload()
+
+    return {
+        "performance": performance,
+        "overdue_orders": overdue,
+        "technician_workload": workload
+    }        

@@ -63,6 +63,12 @@ from database.database import (
     update_work_order_status,
     delete_work_order,
     get_work_order_statistics,
+    get_work_order_intelligence,
+    get_work_order_performance,
+    get_work_order_workload,
+    get_overdue_work_orders,
+    get_technician_workload_intelligence,
+
 
     # Dashboard
     get_dashboard,
@@ -94,7 +100,7 @@ create_tables()
 
 app = FastAPI(
     title="FuElectric-AI",
-    version="3.1",
+    version="3.5.0",
     description="AI Equipment Diagnosis & Maintenance API",
 )
 
@@ -122,7 +128,7 @@ app.add_middleware(
 @app.get("/")
 def home():
     return {
-        "message": "Welcome to FuElectric-AI 3.1"
+        "message": "Welcome to FuElectric-AI 3.5.0"
     }
 
 
@@ -409,6 +415,20 @@ def repair_history(
 # ==========================================================
 # USERS
 # ==========================================================
+@app.get("/users/generate-password")
+def generate_password(length: int = 16):
+
+    password = generate_strong_password(
+        length
+    )
+
+    return {
+        "message": "Strong password generated successfully.",
+        "password": password,
+        "length": len(password)
+    }
+
+
 
 @app.get("/users")
 def list_users():
@@ -569,20 +589,6 @@ def viewer_dashboard(
     }
 
 
-@app.get("/users/generate-password")
-def generate_password(length: int = 16):
-
-    password = generate_strong_password(
-        length
-    )
-
-    return {
-        "message": "Strong password generated successfully.",
-        "password": password,
-        "length": len(password)
-    }
-
-
 # ==========================================================
 # DASHBOARD
 # ==========================================================
@@ -736,6 +742,61 @@ def work_order_statistics():
 
     return get_work_order_statistics()
 
+# ==========================================================
+# WORK ORDER INTELLIGENCE — FuElectric-AI v3.5.0
+# ==========================================================
+
+
+@app.get("/work-orders/overdue")
+def overdue_work_orders():
+
+    overdue = get_overdue_work_orders()
+
+    return {
+        "message": "Overdue work orders retrieved successfully.",
+        "total_overdue": len(overdue),
+        "work_orders": overdue
+    }
+
+
+# ==========================================================
+# TECHNICIAN WORKLOAD
+# ==========================================================
+
+@app.get("/work-orders/workload")
+def work_order_workload():
+
+    return {
+        "message": "Technician workload retrieved successfully.",
+        "workload": get_work_order_workload()
+    }
+
+
+# ==========================================================
+# WORK ORDER PERFORMANCE
+# ==========================================================
+
+@app.get("/work-orders/performance")
+def work_order_performance():
+
+    return {
+        "message": "Work order performance retrieved successfully.",
+        "performance": get_work_order_performance()
+    }
+
+
+# ==========================================================
+# WORK ORDER INTELLIGENCE
+# ==========================================================
+
+@app.get("/work-orders/intelligence")
+def work_order_intelligence():
+
+    return {
+        "message": "Work Order Intelligence generated successfully.",
+        "intelligence": get_work_order_intelligence()
+    }
+
 
 # ==========================================================
 # GET SINGLE WORK ORDER
@@ -837,6 +898,7 @@ def change_work_order_status(
         "work_order": updated_work_order
     }
 
+
 # ==========================================================
 # DELETE WORK ORDER — FuElectric-AI v3.4.4
 # ==========================================================
@@ -860,4 +922,19 @@ def remove_work_order(
     return {
         "message": "Work order deleted successfully.",
         "work_order_id": work_order_id
+    }
+
+# ==========================================================
+# TECHNICIAN WORKLOAD INTELLIGENCE — FuElectric-AI v3.5.5
+# ==========================================================
+
+@app.get("/work-orders/workload/intelligence")
+def technician_workload_intelligence():
+
+    return {
+        "message":
+            "Technician workload intelligence generated successfully.",
+
+        "technicians":
+            get_technician_workload_intelligence()
     }
