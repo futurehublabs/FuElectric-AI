@@ -76,6 +76,13 @@ from database.database import (
     get_analytics,
     get_summary_report,
     get_connection,
+
+    # Reliability Analytics — v3.5.3
+    get_equipment_reliability,
+    get_all_equipment_reliability,
+    get_reliability_summary,
+    get_reliability_ranking,
+
 )
 
 
@@ -937,4 +944,80 @@ def technician_workload_intelligence():
 
         "technicians":
             get_technician_workload_intelligence()
+    }
+
+# ==========================================================
+# EQUIPMENT RELIABILITY ANALYTICS — FuElectric-AI v3.5.3
+# ==========================================================
+
+@app.get("/reliability")
+def reliability_analytics():
+
+    return {
+        "message":
+            "Equipment reliability analytics generated successfully.",
+
+        "equipment":
+            get_all_equipment_reliability()
+    }
+
+
+# ==========================================================
+# RELIABILITY SUMMARY
+# ==========================================================
+
+@app.get("/reliability/summary")
+def reliability_summary():
+
+    return {
+        "message":
+            "Reliability summary generated successfully.",
+
+        "summary":
+            get_reliability_summary()
+    }
+
+
+# ==========================================================
+# RELIABILITY RANKING
+# ==========================================================
+
+@app.get("/reliability/ranking")
+def reliability_ranking():
+
+    return {
+        "message":
+            "Equipment reliability ranking generated successfully.",
+
+        "ranking":
+            get_reliability_ranking()
+    }
+
+
+# ==========================================================
+# SINGLE EQUIPMENT RELIABILITY
+# ==========================================================
+
+@app.get("/reliability/{equipment_id}")
+def equipment_reliability(
+    equipment_id: str
+):
+
+    reliability = get_equipment_reliability(
+        equipment_id
+    )
+
+    if reliability is None:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Equipment not found."
+        )
+
+    return {
+        "message":
+            "Equipment reliability analytics generated successfully.",
+
+        "reliability":
+            reliability
     }

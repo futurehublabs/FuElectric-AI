@@ -2495,9 +2495,7 @@ async function loadWorkOrders() {
 
 
         const container =
-            document.getElementById(
-                "work-order-list"
-            );
+    document.getElementById("wo-ai-insights");
 
 
         if (!container) {
@@ -3459,101 +3457,6 @@ async function loadTechnicianWorkloadIntelligence() {
 
 }
 
-// ----------------------------------------------------------
-// WORK ORDER INTELLIGENCE
-// ----------------------------------------------------------
-
-async function loadWorkOrderIntelligence() {
-
-    const container =
-        document.getElementById(
-            "work-order-intelligence"
-        );
-
-    if (!container) {
-        return;
-    }
-
-    container.innerHTML = `
-        <div class="alert alert-info">
-            🧠 FuElectric-AI is analyzing Work Order Intelligence...
-        </div>
-    `;
-
-    try {
-
-        const response =
-            await fetch(
-                `${API_URL}/work-orders/intelligence`
-            );
-
-        if (!response.ok) {
-
-            throw new Error(
-                `Intelligence request failed: ${response.status}`
-            );
-
-        }
-
-        const data =
-            await response.json();
-
-        const intelligence =
-            data.intelligence || {};
-
-        if (
-            !intelligence ||
-            Object.keys(intelligence).length === 0
-        ) {
-
-            container.innerHTML = `
-                <p>
-                    No Work Order Intelligence available yet.
-                </p>
-            `;
-
-            return;
-        }
-
-        container.innerHTML = `
-            <div class="intelligence-result">
-
-                <h3>
-                    🧠 FuElectric-AI Work Order Intelligence
-                </h3>
-
-                <pre>${escapeHtml(
-                    JSON.stringify(
-                        intelligence,
-                        null,
-                        2
-                    )
-                )}</pre>
-
-            </div>
-        `;
-
-    }
-
-    catch (error) {
-
-        console.error(
-            "Work Order Intelligence error:",
-            error
-        );
-
-        container.innerHTML = `
-            <div class="alert alert-danger">
-                ❌ Unable to load Work Order Intelligence.
-                <br>
-                ${escapeHtml(error.message)}
-            </div>
-        `;
-
-    }
-
-}
-
 // ==========================================================
 // BUTTON MESSAGES
 // ==========================================================
@@ -3711,6 +3614,7 @@ window.addEventListener(
 // ==========================================================
 // WORK ORDER INTELLIGENCE — v3.5.1
 // ==========================================================
+
 
 async function loadWorkOrderIntelligence() {
 
@@ -3975,7 +3879,7 @@ async function loadWorkOrderIntelligence() {
 function generateWorkOrderInsights(data) {
 
     const container =
-        document.getElementById("work-order-insights");
+        document.getElementById("wo-ai-insights")
 
     if (!container) {
         console.warn(
@@ -3995,8 +3899,6 @@ function generateWorkOrderInsights(data) {
     const performance =
         intelligence.performance || {};
 
-    const overdueOrders =
-        intelligence.overdue_orders || [];
 
     const technicianWorkload =
         intelligence.technician_workload || [];
@@ -4022,11 +3924,9 @@ function generateWorkOrderInsights(data) {
         );
 
     const overdueWorkOrders =
-        Number(
-            performance.overdue_work_orders ??
-            overdueOrders.length ??
-            0
-        );
+    Number(
+        performance.overdue_work_orders ?? 0
+    );
 
     const cancelledWorkOrders =
         Number(
@@ -4106,33 +4006,7 @@ function generateWorkOrderInsights(data) {
 
     const insights = [];
 
-
-    // OVERDUE
-    if (overdueWorkOrders > 0) {
-
-        insights.push(`
-            <p>
-                🔴
-                <strong>
-                    ${overdueWorkOrders}
-                    overdue work order(s)
-                    detected.
-                </strong>
-                Immediate attention is recommended.
-            </p>
-        `);
-
-    } else {
-
-        insights.push(`
-            <p>
-                🟢
-                No overdue work orders detected.
-            </p>
-        `);
-
-    }
-
+console.log("INSIGHTS ARRAY CREATED:", insights);
 
     // COMPLETION RATE
     if (completionRate >= 80) {
@@ -4286,280 +4160,10 @@ function generateWorkOrderInsights(data) {
 }
 
 
-    // ------------------------------------------------------
-    // OVERDUE ANALYSIS
-    // ------------------------------------------------------
+    
 
-    if (overdue.length > 0) {
 
-        insights.push(
-            `⚠️ ${overdue.length} work order(s) require immediate attention because they are overdue.`
-        );
+    
 
-    } else {
 
-        insights.push(
-            "✅ No overdue work orders detected."
-        );
 
-    }
-
-
-    // ------------------------------------------------------
-    // COMPLETION ANALYSIS
-    // ------------------------------------------------------
-
-    const completionRate =
-        performance.completion_rate ?? 0;
-
-    if (completionRate >= 80) {
-
-        insights.push(
-            `🟢 Work-order completion performance is strong at ${completionRate}%.`
-        );
-
-    } else if (completionRate >= 50) {
-
-        insights.push(
-            `🟡 Work-order completion rate is ${completionRate}%. Monitoring is recommended.`
-        );
-
-    } else {
-
-        insights.push(
-            `🔴 Work-order completion rate is low at ${completionRate}%. Management attention is recommended.`
-        );
-
-    }
-
-
-    // ------------------------------------------------------
-    // TECHNICIAN WORKLOAD
-    // ------------------------------------------------------
-
-    if (workload.length > 0) {
-
-        const busiestTechnician =
-            workload[0];
-
-        insights.push(
-            `👨‍🔧 ${busiestTechnician.technician_id} currently has the highest work-order workload with ${busiestTechnician.total_orders} order(s).`
-        );
-
-    }
-
-
-    // ------------------------------------------------------
-    // DISPLAY
-    // ------------------------------------------------------
-
-    container.innerHTML = insights.map(
-        insight => `<p>${insight}</p>`
-    ).join("");
-
-
-
-// ==========================================================
-// WORK ORDER INTELLIGENCE DETAILS — v3.5.1
-// ==========================================================
-
-async function loadWorkOrderIntelligenceDetails() {
-
-    // ------------------------------------------------------
-    // OVERDUE WORK ORDERS
-    // ------------------------------------------------------
-
-    try {
-
-        const overdueResponse =
-            await fetch(`${API_URL}/work-orders/overdue`);
-
-        if (!overdueResponse.ok) {
-            throw new Error("Failed to load overdue work orders.");
-        }
-
-        const overdueData =
-            await overdueResponse.json();
-
-        const overdueContainer =
-            document.getElementById("wo-overdue");
-
-        if (overdueContainer) {
-
-            if (
-                !overdueData.work_orders ||
-                overdueData.work_orders.length === 0
-            ) {
-
-                overdueContainer.innerHTML =
-                    "<p>✅ No overdue work orders.</p>";
-
-            } else {
-
-                overdueContainer.innerHTML =
-                    overdueData.work_orders.map(order => `
-
-                        <div class="work-order-alert">
-
-                            <strong>
-                                ${order.work_order_id}
-                            </strong>
-
-                            — ${order.work_type}
-
-                            <br>
-
-                            Equipment:
-                            ${order.equipment_id}
-
-                            <br>
-
-                            Due:
-                            ${order.due_date}
-
-                            <br>
-
-                            Priority:
-                            ${order.priority}
-
-                        </div>
-
-                    `).join("");
-            }
-        }
-
-    } catch (error) {
-
-        console.error(
-            "Overdue Work Orders Error:",
-            error
-        );
-
-        const overdueContainer =
-            document.getElementById("wo-overdue");
-
-        if (overdueContainer) {
-            overdueContainer.innerHTML =
-                "<p>⚠️ Unable to load overdue work orders.</p>";
-        }
-    }
-
-
-    // ------------------------------------------------------
-    // TECHNICIAN WORKLOAD
-    // ------------------------------------------------------
-
-    try {
-
-        const workloadResponse =
-            await fetch(`${API_URL}/work-orders/workload`);
-
-        if (!workloadResponse.ok) {
-            throw new Error("Failed to load technician workload.");
-        }
-
-        const workloadData =
-            await workloadResponse.json();
-
-        const workloadContainer =
-            document.getElementById("wo-workload");
-
-        if (workloadContainer) {
-
-            if (
-                !workloadData.workload ||
-                workloadData.workload.length === 0
-            ) {
-
-                workloadContainer.innerHTML =
-                    "<p>👨‍🔧 No technician workload data available.</p>";
-
-            } else {
-
-                workloadContainer.innerHTML = `
-
-                    <table>
-
-                        <thead>
-
-                            <tr>
-                                <th>Technician</th>
-                                <th>Total</th>
-                                <th>Open</th>
-                                <th>Assigned</th>
-                                <th>In Progress</th>
-                                <th>Completed</th>
-                                <th>Critical</th>
-                                <th>High</th>
-                            </tr>
-
-                        </thead>
-
-                        <tbody>
-
-                            ${workloadData.workload.map(item => `
-
-                                <tr>
-
-                                    <td>
-                                        ${item.technician_id}
-                                    </td>
-
-                                    <td>
-                                        ${item.total_orders ?? 0}
-                                    </td>
-
-                                    <td>
-                                        ${item.open_orders ?? 0}
-                                    </td>
-
-                                    <td>
-                                        ${item.assigned_orders ?? 0}
-                                    </td>
-
-                                    <td>
-                                        ${item.in_progress_orders ?? 0}
-                                    </td>
-
-                                    <td>
-                                        ${item.completed_orders ?? 0}
-                                    </td>
-
-                                    <td>
-                                        ${item.critical_orders ?? 0}
-                                    </td>
-
-                                    <td>
-                                        ${item.high_priority_orders ?? 0}
-                                    </td>
-
-                                </tr>
-
-                            `).join("")}
-
-                        </tbody>
-
-                    </table>
-                `;
-            }
-        }
-
-    } catch (error) {
-
-        console.error(
-            "Technician Workload Error:",
-            error
-        );
-
-        const workloadContainer =
-            document.getElementById("wo-workload");
-
-        if (workloadContainer) {
-            workloadContainer.innerHTML =
-                "<p>⚠️ Unable to load technician workload.</p>";
-        }
-    }
-
-} 
-
-loadWorkOrderIntelligenceDetails();

@@ -2137,3 +2137,401 @@ def get_work_order_intelligence():
         "overdue_orders": overdue,
         "technician_workload": workload
     }        
+
+    # ==========================================================
+# EQUIPMENT RELIABILITY ANALYTICS — FuElectric-AI v3.5.3
+# ==========================================================
+
+def get_equipment_reliability(equipment_id: str):
+    """
+    Calculate reliability analytics for one equipment item.
+
+    FuElectric-AI v3.5.3
+    """
+
+    conn = get_connection()
+
+    try:
+
+        # --------------------------------------------------
+        # GET EQUIPMENT
+        # --------------------------------------------------
+
+        equipment = conn.execute("""
+            SELECT *
+            FROM equipment
+            WHERE equipment_id = ?
+        """, (equipment_id,)).fetchone()
+
+        if equipment is None:
+            return None
+
+        equipment = dict(equipment)
+
+        # --------------------------------------------------
+        # REPAIR DATA
+        # --------------------------------------------------
+
+        repairs = conn.execute("""
+            SELECT
+                repair_id,
+                fault_reported,
+                diagnosis,
+                action_taken,
+                technician_id,
+                repair_date,
+                repair_status
+            FROM repairs
+            WHERE equipment_id = ?
+            ORDER BY repair_date ASC
+        """, (equipment_id,)).fetchall()
+
+        repairs = [dict(row) for row in repairs]
+
+        # --------------------------------------------------
+        # MAINTENANCE DATA
+        # --------------------------------------------------
+
+        maintenance = conn.execute("""
+            SELECT
+                id,
+                maintenance_date,
+                maintenance_type,
+                description,
+                technician,
+                cost,
+                status
+            FROM maintenance_history
+            WHERE equipment_id = ?
+            ORDER BY maintenance_date ASC
+        """, (equipment_id,)).fetchall()
+
+        maintenance = [dict(row) for row in maintenance]
+
+        # --------------------------------------------------
+        # BASIC COUNTS
+        # --------------------------------------------------
+
+        total_repairs = len(repairs)
+
+        completed_repairs = sum(
+            1
+            for repair in repairs
+            if repair.get("repair_status") == "Completed"
+        )
+
+        total_maintenance = len(maintenance)
+
+        # --------------------------------------------------
+        # VALID REPAIR DATES
+        # --------------------------------------------------
+
+        repair_dates = []
+
+        for repair in repairs:
+
+            repair_date = repair.get("repair_date")
+
+            if not repair_date:
+                continue
+
+            try:
+                parsed_date = datetime.strptime(
+                    repair_date,
+                    "%Y-%m-%d %H:%M:%S"
+                )
+
+                repair_dates.append(parsed_date)
+
+            except ValueError:
+
+                try:
+                    parsed_date = datetime.strptime(
+                        repair_date,
+                        "%Y-%m-%d"
+                    )
+
+                    repair_dates.append(parsed_date)
+
+                except ValueError:
+                    continue
+
+        # --------------------------------------------------
+        # FAILURE FREQUENCY
+        # --------------------------------------------------
+
+        failure_frequency = total_repairs
+
+        # --------------------------------------------------
+        # FIRST / LAST FAILURE
+        # --------------------------------------------------
+
+        first_failure_date = None
+        last_failure_date = None
+
+        if repair_dates:
+
+            first_failure_date = min(repair_dates).strftime(
+                "%Y-%m-%d"
+            )
+
+            last_failure_date = max(repair_dates).strftime(
+                "%Y-%m-%d"
+            )
+
+        # --------------------------------------------------
+        # MTBF
+        # --------------------------------------------------
+        # MTBF requires at least two dated failures.
+        #
+        # We calculate the average number of days between
+        # recorded repair events.
+        # --------------------------------------------------
+
+        mtbf = None
+
+        if len(repair_dates) >= 2:
+
+            repair_dates.sort()
+
+            intervals = []
+
+            for index in range(1, len(repair_dates)):
+
+                interval = (
+                    repair_dates[index]
+                    - repair_dates[index - 1]
+                ).total_seconds() / 86400
+
+                intervals.append(interval)
+
+            if intervals:
+
+                mtbf = round(
+                    sum(intervals) / len(intervals),
+                    2
+                )
+
+        # --------------------------------------------------
+        # MTTR
+        # --------------------------------------------------
+        #
+        # The current database has only one repair_date.
+        # It does not contain a separate repair-start and
+        # repair-completion timestamp.
+        #
+        # Therefore MTTR cannot be reliably calculated yet.
+        # --------------------------------------------------
+
+        mttr = None
+
+        # --------------------------------------------------
+        # RELIABILITY SCORE
+        # --------------------------------------------------
+        #
+        # Initial v3.5.3 reliability model:
+        #
+        # Start at 100.
+        #
+        # Repeated repairs reduce reliability.
+        # Maintenance activity provides a small positive
+        # reliability signal.
+        #
+        # This is an analytics score, not a physical
+        # engineering reliability probability.
+        # --------------------------------------------------
+
+        reliability_score = 100.0
+
+        reliability_score -= total_repairs * 10
+
+        reliability_score += total_maintenance * 2
+
+        reliability_score = max(
+            0,
+            min(
+                100,
+                reliability_score
+            )
+        )
+
+        reliability_score = round(
+            reliability_score,
+            2
+        )
+
+        # --------------------------------------------------
+        # RELIABILITY STATUS
+        # --------------------------------------------------
+
+        if reliability_score >= 90:
+
+            reliability_status = "Highly Reliable"
+
+        elif reliability_score >= 75:
+
+            reliability_status = "Reliable"
+
+        elif reliability_score >= 50:
+
+            reliability_status = "Moderate"
+
+        else:
+
+            reliability_status = "Low Reliability"
+
+        # --------------------------------------------------
+        # RETURN RELIABILITY ANALYTICS
+        # --------------------------------------------------
+
+        return {
+            "equipment_id": equipment_id,
+            "equipment_name": equipment["name"],
+            "category": equipment["category"],
+            "status": equipment["status"],
+
+            "total_repairs": total_repairs,
+            "completed_repairs": completed_repairs,
+            "total_maintenance": total_maintenance,
+
+            "failure_frequency": failure_frequency,
+
+            "first_failure_date": first_failure_date,
+            "last_failure_date": last_failure_date,
+
+            "mtbf_days": mtbf,
+            "mttr_days": mttr,
+
+            "reliability_score": reliability_score,
+            "reliability_status": reliability_status
+        }
+
+    finally:
+
+        conn.close()
+
+
+def get_all_equipment_reliability():
+    """
+    Return reliability analytics for all equipment.
+
+    FuElectric-AI v3.5.3
+    """
+
+    conn = get_connection()
+
+    try:
+
+        equipment_list = conn.execute("""
+            SELECT equipment_id
+            FROM equipment
+            ORDER BY name
+        """).fetchall()
+
+    finally:
+
+        conn.close()
+
+    results = []
+
+    for equipment in equipment_list:
+
+        reliability = get_equipment_reliability(
+            equipment["equipment_id"]
+        )
+
+        if reliability:
+
+            results.append(reliability)
+
+    return results
+
+
+def get_reliability_summary():
+    """
+    Return an overall equipment reliability summary.
+
+    FuElectric-AI v3.5.3
+    """
+
+    reliability_data = get_all_equipment_reliability()
+
+    total_equipment = len(reliability_data)
+
+    if total_equipment == 0:
+
+        return {
+            "total_equipment": 0,
+            "average_reliability_score": 0,
+            "highly_reliable": 0,
+            "reliable": 0,
+            "moderate": 0,
+            "low_reliability": 0
+        }
+
+    total_score = sum(
+        item["reliability_score"]
+        for item in reliability_data
+    )
+
+    highly_reliable = sum(
+        1
+        for item in reliability_data
+        if item["reliability_status"] == "Highly Reliable"
+    )
+
+    reliable = sum(
+        1
+        for item in reliability_data
+        if item["reliability_status"] == "Reliable"
+    )
+
+    moderate = sum(
+        1
+        for item in reliability_data
+        if item["reliability_status"] == "Moderate"
+    )
+
+    low_reliability = sum(
+        1
+        for item in reliability_data
+        if item["reliability_status"] == "Low Reliability"
+    )
+
+    return {
+        "total_equipment": total_equipment,
+
+        "average_reliability_score": round(
+            total_score / total_equipment,
+            2
+        ),
+
+        "highly_reliable": highly_reliable,
+        "reliable": reliable,
+        "moderate": moderate,
+        "low_reliability": low_reliability
+    }
+
+
+def get_reliability_ranking():
+    """
+    Rank equipment by reliability score.
+
+    FuElectric-AI v3.5.3
+    """
+
+    reliability_data = get_all_equipment_reliability()
+
+    reliability_data.sort(
+        key=lambda item: item["reliability_score"],
+        reverse=True
+    )
+
+    for index, item in enumerate(
+        reliability_data,
+        start=1
+    ):
+
+        item["reliability_rank"] = index
+
+    return reliability_data
