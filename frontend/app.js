@@ -4052,10 +4052,9 @@ async function loadDeterioratingEquipment() {
 
 }
 
-
-// ----------------------------------------------------------
-// EQUIPMENT HEALTH TREND
-// ----------------------------------------------------------
+// ==========================================================
+// v3.5.4 — HISTORICAL EQUIPMENT CONDITION INTELLIGENCE
+// ==========================================================
 
 async function loadEquipmentTrend() {
 
@@ -4064,12 +4063,12 @@ async function loadEquipmentTrend() {
             "health-trend-equipment"
         );
 
-    const container =
+    const result =
         document.getElementById(
             "health-trend-result"
         );
 
-    if (!selector || !container) {
+    if (!selector || !result) {
         return;
     }
 
@@ -4078,39 +4077,38 @@ async function loadEquipmentTrend() {
 
     if (!equipmentId) {
 
-        container.innerHTML = `
+        result.innerHTML = `
             <div class="info">
-                Select equipment to view health trend.
+                Select equipment to view its historical condition.
             </div>
         `;
 
         return;
     }
 
-    container.innerHTML = `
+    result.innerHTML = `
         <div class="info">
-            📈 Loading equipment health trend...
+            Loading historical equipment condition...
         </div>
     `;
 
     try {
 
+        // --------------------------------------------------
+        // V3.5.4 HISTORICAL HEALTH-RISK ENDPOINT
+        // --------------------------------------------------
+
         const response =
             await fetch(
-                `${API_URL}/equipment/${encodeURIComponent(
+                `${API_URL}/health-risk-history/${encodeURIComponent(
                     equipmentId
-                )}/health-trend`
+                )}?months=3`
             );
 
         if (!response.ok) {
 
-            const errorData =
-                await response.json()
-                    .catch(() => ({}));
-
             throw new Error(
-                errorData.detail ||
-                `Health trend request failed: ${response.status}`
+                `Historical health request failed: ${response.status}`
             );
 
         }
@@ -4118,134 +4116,435 @@ async function loadEquipmentTrend() {
         const data =
             await response.json();
 
-        const trend =
-            data.trend ||
-            data.health_trend ||
-            data.history ||
-            [];
+        console.log(
+            "Equipment Historical Health Intelligence:",
+            data
+        );
 
-        if (
-            Array.isArray(trend) &&
-            trend.length === 0
-        ) {
+        // --------------------------------------------------
+        // MONTHLY HISTORY
+        // --------------------------------------------------
 
-            container.innerHTML = `
-                <div class="info">
+        const monthlyHistory =
+            Array.isArray(data.monthly_history)
+                ? data.monthly_history
+                : [];
 
-                    ℹ️ No health trend data available
-                    for this equipment yet.
+        // --------------------------------------------------
+        // BUILD MONTHLY HISTORY TABLE
+        // --------------------------------------------------
+
+        const historyRows =
+            monthlyHistory.map(
+                month => {
+
+                    const condition =
+                        month.condition ??
+                        "Unknown";
+
+                    const trend =
+                        month.trend ??
+                        "No Data";
+
+                    return `
+
+                        <tr>
+
+                            <td>
+                                <strong>
+                                    ${escapeHtml(
+                                        month.month ?? "--"
+                                    )}
+                                </strong>
+                            </td>
+
+                            <td>
+                                ${
+                                    month.health_score !== undefined
+                                    ? `${formatNumber(
+                                        month.health_score
+                                    )}%`
+                                    : "--"
+                                }
+                            </td>
+
+                            <td>
+                                ${
+                                    month.risk_score !== undefined
+                                    ? `${formatNumber(
+                                        month.risk_score
+                                    )}%`
+                                    : "--"
+                                }
+                            </td>
+
+                            <td>
+                                ${escapeHtml(condition)}
+                            </td>
+
+                            <td>
+                                ${escapeHtml(trend)}
+                            </td>
+
+                            <td>
+                                ${month.repair_count ?? 0}
+                            </td>
+
+                            <td>
+                                ${month.maintenance_count ?? 0}
+                            </td>
+
+                        </tr>
+
+                    `;
+
+                }
+            ).join("");
+
+        // --------------------------------------------------
+        // IMMEDIATE ACTIONS
+        // --------------------------------------------------
+
+        const immediateActions =
+            Array.isArray(data.immediate_actions)
+                ? data.immediate_actions
+                : [];
+
+        const immediateActionsHtml =
+            immediateActions.length
+
+            ? `
+                <ul>
+
+                    ${immediateActions.map(
+                        action => `
+
+                            <li>
+                                ${escapeHtml(action)}
+                            </li>
+
+                        `
+                    ).join("")}
+
+                </ul>
+              `
+
+            : `
+                <p>
+                    No immediate actions identified.
+                </p>
+              `;
+
+        // --------------------------------------------------
+        // RECOMMENDATIONS
+        // --------------------------------------------------
+
+        const recommendations =
+            Array.isArray(data.recommendations)
+                ? data.recommendations
+                : [];
+
+        const recommendationsHtml =
+            recommendations.length
+
+            ? `
+                <ul>
+
+                    ${recommendations.map(
+                        recommendation => `
+
+                            <li>
+                                ${escapeHtml(
+                                    recommendation
+                                )}
+                            </li>
+
+                        `
+                    ).join("")}
+
+                </ul>
+              `
+
+            : `
+                <p>
+                    No additional recommendations.
+                </p>
+              `;
+
+        // --------------------------------------------------
+        // RENDER COMPLETE HISTORICAL INTELLIGENCE
+        // --------------------------------------------------
+
+        result.innerHTML = `
+
+            <div class="dashboard">
+
+                <!-- ====================================== -->
+                <!-- CURRENT CONDITION -->
+                <!-- ====================================== -->
+
+                <div class="card">
+
+                    <h3>
+                        Current Health
+                    </h3>
+
+                    <p>
+                        <strong>
+                            ${
+                                data.current_health_score !== undefined
+                                ? `${formatNumber(
+                                    data.current_health_score
+                                )}%`
+                                : "--"
+                            }
+                        </strong>
+                    </p>
 
                 </div>
-            `;
 
-            return;
-        }
 
-        if (Array.isArray(trend)) {
+                <div class="card">
 
-            container.innerHTML = `
+                    <h3>
+                        Current Risk
+                    </h3>
 
-                <div class="table-container">
-
-                    <table>
-
-                        <thead>
-
-                            <tr>
-                                <th>Date</th>
-                                <th>Health Score</th>
-                                <th>Status</th>
-                            </tr>
-
-                        </thead>
-
-                        <tbody>
-
-                            ${trend.map(item => `
-
-                                <tr>
-
-                                    <td>
-                                        ${escapeHtml(
-                                            item.date ||
-                                            item.timestamp ||
-                                            item.recorded_at ||
-                                            "N/A"
-                                        )}
-                                    </td>
-
-                                    <td>
-                                        <strong>
-                                            ${
-                                                item.health_score ??
-                                                item.score ??
-                                                0
-                                            }%
-                                        </strong>
-                                    </td>
-
-                                    <td>
-                                        ${escapeHtml(
-                                            item.status ||
-                                            "Unknown"
-                                        )}
-                                    </td>
-
-                                </tr>
-
-                            `).join("")}
-
-                        </tbody>
-
-                    </table>
+                    <p>
+                        <strong>
+                            ${
+                                data.current_risk_score !== undefined
+                                ? `${formatNumber(
+                                    data.current_risk_score
+                                )}%`
+                                : "--"
+                            }
+                        </strong>
+                    </p>
 
                 </div>
 
-            `;
 
-        }
+                <div class="card">
 
-        else {
+                    <h3>
+                        Overall Trend
+                    </h3>
 
-            container.innerHTML = `
-                <div class="intelligence-panel">
-
-                    <pre>
-${escapeHtml(
-    JSON.stringify(data, null, 2)
-)}
-                    </pre>
+                    <p>
+                        <strong>
+                            ${escapeHtml(
+                                data.overall_trend ??
+                                "Unknown"
+                            )}
+                        </strong>
+                    </p>
 
                 </div>
-            `;
 
-        }
+
+                <div class="card">
+
+                    <h3>
+                        Period
+                    </h3>
+
+                    <p>
+                        Last
+                        ${data.period_months ?? 3}
+                        months
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <!-- ========================================== -->
+            <!-- EQUIPMENT OVERVIEW -->
+            <!-- ========================================== -->
+
+            <div class="card">
+
+                <h3>
+                    📊 Historical Condition Overview
+                </h3>
+
+                <p>
+                    ${escapeHtml(
+                        data.overview ??
+                        "No historical overview available."
+                    )}
+                </p>
+
+            </div>
+
+
+            <!-- ========================================== -->
+            <!-- MONTHLY HISTORY -->
+            <!-- ========================================== -->
+
+            <div class="card">
+
+                <h3>
+                    📅 Monthly Equipment Condition
+                </h3>
+
+                ${
+                    historyRows
+
+                    ? `
+
+                        <div class="table-container">
+
+                            <table>
+
+                                <thead>
+
+                                    <tr>
+
+                                        <th>
+                                            Month
+                                        </th>
+
+                                        <th>
+                                            Health
+                                        </th>
+
+                                        <th>
+                                            Risk
+                                        </th>
+
+                                        <th>
+                                            Condition
+                                        </th>
+
+                                        <th>
+                                            Trend
+                                        </th>
+
+                                        <th>
+                                            Repairs
+                                        </th>
+
+                                        <th>
+                                            Maintenance
+                                        </th>
+
+                                    </tr>
+
+                                </thead>
+
+                                <tbody>
+
+                                    ${historyRows}
+
+                                </tbody>
+
+                            </table>
+
+                        </div>
+
+                      `
+
+                    : `
+                        <div class="info">
+                            No monthly history available.
+                        </div>
+                      `
+                }
+
+            </div>
+
+
+            <!-- ========================================== -->
+            <!-- IMMEDIATE ACTIONS -->
+            <!-- ========================================== -->
+
+            <div class="card">
+
+                <h3>
+                    🚨 Immediate Actions
+                </h3>
+
+                ${immediateActionsHtml}
+
+            </div>
+
+
+            <!-- ========================================== -->
+            <!-- RECOMMENDATIONS -->
+            <!-- ========================================== -->
+
+            <div class="card">
+
+                <h3>
+                    💡 FuElectric-AI Recommendations
+                </h3>
+
+                ${recommendationsHtml}
+
+            </div>
+
+
+            <!-- ========================================== -->
+            <!-- ACTIVITY SUMMARY -->
+            <!-- ========================================== -->
+
+            <div class="card">
+
+                <h3>
+                    🔧 Activity Summary
+                </h3>
+
+                <p>
+                    <strong>
+                        Total Repairs:
+                    </strong>
+
+                    ${data.total_repairs ?? 0}
+                </p>
+
+                <p>
+                    <strong>
+                        Total Maintenance:
+                    </strong>
+
+                    ${data.total_maintenance ?? 0}
+                </p>
+
+            </div>
+
+        `;
 
     }
 
     catch (error) {
 
         console.error(
-            "Equipment Health Trend Error:",
+            "Historical equipment condition error:",
             error
         );
 
-        container.innerHTML = `
+        result.innerHTML = `
+
             <div class="error">
 
-                ❌ Unable to load equipment health trend.
+                ❌ Unable to load historical equipment condition.
 
-                <br>
+                <br><br>
 
-                ${escapeHtml(error.message)}
+                ${escapeHtml(
+                    error.message
+                )}
 
             </div>
+
         `;
 
     }
 
 }
-
 
 // ----------------------------------------------------------
 // LOAD ALL v3.5.4 INTELLIGENCE
@@ -7207,7 +7506,6 @@ async function refreshHealthRiskIntelligence() {
 
 }
 
-
 // ==========================================================
 // v3.5.4 — HEALTH & RISK SUMMARY
 // ==========================================================
@@ -7259,8 +7557,8 @@ async function loadHealthRiskSummary() {
 
                     <p>
                         ${
-                            data.average_health !== undefined
-                            ? `${formatNumber(data.average_health)}%`
+                            data.average_health_score !== undefined
+                            ? `${formatNumber(data.average_health_score)}%`
                             : "--"
                         }
                     </p>
@@ -7273,8 +7571,8 @@ async function loadHealthRiskSummary() {
 
                     <p>
                         ${
-                            data.average_risk !== undefined
-                            ? `${formatNumber(data.average_risk)}%`
+                            data.average_risk_score !== undefined
+                            ? `${formatNumber(data.average_risk_score)}%`
                             : "--"
                         }
                     </p>
@@ -7678,26 +7976,18 @@ async function loadDeterioratingEquipment() {
 
 }
 
-
 // ==========================================================
 // v3.5.4 — HEALTH TREND EQUIPMENT SELECTOR
 // ==========================================================
 
 async function loadHealthTrendEquipmentSelector() {
 
-    const selectors = [
-
-        document.getElementById(
-            "health-trend-equipment-select"
-        ),
-
+    const selector =
         document.getElementById(
             "health-trend-equipment"
-        )
+        );
 
-    ].filter(Boolean);
-
-    if (!selectors.length) {
+    if (!selector) {
         return;
     }
 
@@ -7709,42 +7999,49 @@ async function loadHealthTrendEquipmentSelector() {
             );
 
         if (!response.ok) {
+
             throw new Error(
                 `Equipment request failed: ${response.status}`
             );
+
         }
 
         const equipment =
             await response.json();
 
-        selectors.forEach(
-            selector => {
+        selector.innerHTML = `
+            <option value="">
+                Select Equipment
+            </option>
+        `;
 
-                selector.innerHTML = `
-                    <option value="">
-                        Select Equipment
-                    </option>
-                `;
+        equipment.forEach(
+            item => {
 
-                equipment.forEach(item => {
+                const option =
+                    document.createElement(
+                        "option"
+                    );
 
-                    const option =
-                        document.createElement(
-                            "option"
-                        );
+                option.value =
+                    item.equipment_id;
 
-                    option.value =
-                        item.equipment_id;
+                option.textContent =
+                    `${item.equipment_id} — ${item.name}`;
 
-                    option.textContent =
-                        `${item.equipment_id} — ${item.name}`;
-
-                    selector.appendChild(option);
-
-                });
+                selector.appendChild(
+                    option
+                );
 
             }
         );
+
+        // --------------------------------------------------
+        // LOAD HISTORICAL CONDITION WHEN EQUIPMENT IS SELECTED
+        // --------------------------------------------------
+
+        selector.onchange =
+            loadEquipmentTrend;
 
     }
 
@@ -7761,7 +8058,7 @@ async function loadHealthTrendEquipmentSelector() {
 
 
 // ==========================================================
-// v3.5.4 — EQUIPMENT HEALTH TREND
+// v3.5.4 — HISTORICAL EQUIPMENT CONDITION INTELLIGENCE
 // ==========================================================
 
 async function loadEquipmentTrend() {
@@ -7785,31 +8082,38 @@ async function loadEquipmentTrend() {
 
     if (!equipmentId) {
 
-        result.innerHTML =
-            `<p>Select equipment.</p>`;
+        result.innerHTML = `
+            <div class="info">
+                Select equipment to view its historical condition.
+            </div>
+        `;
 
         return;
-
     }
 
-    result.innerHTML =
-        `<div class="info">
-            Loading health trend...
-        </div>`;
+    result.innerHTML = `
+        <div class="info">
+            Loading historical equipment condition...
+        </div>
+    `;
 
     try {
 
+        // --------------------------------------------------
+        // V3.5.4 HISTORICAL HEALTH-RISK ENDPOINT
+        // --------------------------------------------------
+
         const response =
             await fetch(
-                `${API_URL}/equipment/${encodeURIComponent(
+                `${API_URL}/health-risk-history/${encodeURIComponent(
                     equipmentId
-                )}/health-trend`
+                )}?months=3`
             );
 
         if (!response.ok) {
 
             throw new Error(
-                `Health trend request failed: ${response.status}`
+                `Historical health request failed: ${response.status}`
             );
 
         }
@@ -7818,85 +8122,386 @@ async function loadEquipmentTrend() {
             await response.json();
 
         console.log(
-            "Equipment Health Trend:",
+            "Equipment Historical Health Intelligence:",
             data
         );
 
-        const trend =
-            data.trend ||
-            data.history ||
-            data.data ||
-            [];
+        // --------------------------------------------------
+        // MONTHLY HISTORY
+        // --------------------------------------------------
 
-        if (!Array.isArray(trend) ||
-            trend.length === 0) {
+        const monthlyHistory =
+            Array.isArray(
+                data.monthly_history
+            )
+                ? data.monthly_history
+                : [];
 
-            result.innerHTML =
-                `<div class="info">
-                    No health trend data available for this equipment.
-                </div>`;
+        // --------------------------------------------------
+        // MONTHLY HISTORY TABLE
+        // --------------------------------------------------
 
-            return;
+        let historyHtml = "";
+
+        if (monthlyHistory.length) {
+
+            historyHtml = `
+
+                <div class="table-container">
+
+                    <table>
+
+                        <thead>
+
+                            <tr>
+
+                                <th>Month</th>
+                                <th>Health</th>
+                                <th>Risk</th>
+                                <th>Condition</th>
+                                <th>Trend</th>
+                                <th>Repairs</th>
+                                <th>Maintenance</th>
+
+                            </tr>
+
+                        </thead>
+
+                        <tbody>
+
+                            ${
+                                monthlyHistory.map(
+                                    month => {
+
+                                        return `
+
+                                            <tr>
+
+                                                <td>
+                                                    <strong>
+                                                        ${escapeHtml(
+                                                            month.month ??
+                                                            "--"
+                                                        )}
+                                                    </strong>
+                                                </td>
+
+                                                <td>
+                                                    ${
+                                                        month.health_score !== undefined
+                                                        ? `${formatNumber(
+                                                            month.health_score
+                                                        )}%`
+                                                        : "--"
+                                                    }
+                                                </td>
+
+                                                <td>
+                                                    ${
+                                                        month.risk_score !== undefined
+                                                        ? `${formatNumber(
+                                                            month.risk_score
+                                                        )}%`
+                                                        : "--"
+                                                    }
+                                                </td>
+
+                                                <td>
+                                                    ${escapeHtml(
+                                                        month.condition ??
+                                                        "Unknown"
+                                                    )}
+                                                </td>
+
+                                                <td>
+                                                    ${escapeHtml(
+                                                        month.trend ??
+                                                        "No Data"
+                                                    )}
+                                                </td>
+
+                                                <td>
+                                                    ${
+                                                        month.repair_count ??
+                                                        0
+                                                    }
+                                                </td>
+
+                                                <td>
+                                                    ${
+                                                        month.maintenance_count ??
+                                                        0
+                                                    }
+                                                </td>
+
+                                            </tr>
+
+                                        `;
+
+                                    }
+                                ).join("")
+                            }
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            `;
 
         }
 
+        else {
+
+            historyHtml = `
+                <div class="info">
+                    No monthly history available.
+                </div>
+            `;
+
+        }
+
+        // --------------------------------------------------
+        // IMMEDIATE ACTIONS
+        // --------------------------------------------------
+
+        const immediateActions =
+            Array.isArray(
+                data.immediate_actions
+            )
+                ? data.immediate_actions
+                : [];
+
+        const immediateActionsHtml =
+            immediateActions.length
+
+                ? `
+                    <ul>
+
+                        ${
+                            immediateActions.map(
+                                action => `
+                                    <li>
+                                        ${escapeHtml(
+                                            action
+                                        )}
+                                    </li>
+                                `
+                            ).join("")
+                        }
+
+                    </ul>
+                `
+
+                : `
+                    <p>
+                        No immediate actions identified.
+                    </p>
+                `;
+
+        // --------------------------------------------------
+        // RECOMMENDATIONS
+        // --------------------------------------------------
+
+        const recommendations =
+            Array.isArray(
+                data.recommendations
+            )
+                ? data.recommendations
+                : [];
+
+        const recommendationsHtml =
+            recommendations.length
+
+                ? `
+                    <ul>
+
+                        ${
+                            recommendations.map(
+                                recommendation => `
+                                    <li>
+                                        ${escapeHtml(
+                                            recommendation
+                                        )}
+                                    </li>
+                                `
+                            ).join("")
+                        }
+
+                    </ul>
+                `
+
+                : `
+                    <p>
+                        No additional recommendations.
+                    </p>
+                `;
+
+        // --------------------------------------------------
+        // COMPLETE HISTORICAL INTELLIGENCE
+        // --------------------------------------------------
+
         result.innerHTML = `
 
-            <div class="table-container">
+            <div class="dashboard">
 
-                <table>
+                <div class="card">
 
-                    <thead>
+                    <h3>
+                        Current Health
+                    </h3>
 
-                        <tr>
-                            <th>Date</th>
-                            <th>Health Score</th>
-                            <th>Status</th>
-                        </tr>
+                    <p>
+                        <strong>
+                            ${
+                                data.current_health_score !== undefined
+                                ? `${formatNumber(
+                                    data.current_health_score
+                                )}%`
+                                : "--"
+                            }
+                        </strong>
+                    </p>
 
-                    </thead>
+                </div>
 
-                    <tbody>
 
-                        ${trend.map(
-                            item => `
+                <div class="card">
 
-                                <tr>
+                    <h3>
+                        Current Risk
+                    </h3>
 
-                                    <td>
-                                        ${escapeHtml(
-                                            item.date ??
-                                            item.timestamp ??
-                                            item.recorded_at ??
-                                            "--"
-                                        )}
-                                    </td>
+                    <p>
+                        <strong>
+                            ${
+                                data.current_risk_score !== undefined
+                                ? `${formatNumber(
+                                    data.current_risk_score
+                                )}%`
+                                : "--"
+                            }
+                        </strong>
+                    </p>
 
-                                    <td>
-                                        ${
-                                            item.health_score !== undefined
-                                            ? `${formatNumber(item.health_score)}%`
-                                            : "--"
-                                        }
-                                    </td>
+                </div>
 
-                                    <td>
-                                        ${escapeHtml(
-                                            item.status ??
-                                            getHealthStatus(
-                                                item.health_score
-                                            )
-                                        )}
-                                    </td>
 
-                                </tr>
+                <div class="card">
 
-                            `
-                        ).join("")}
+                    <h3>
+                        Overall Trend
+                    </h3>
 
-                    </tbody>
+                    <p>
+                        <strong>
+                            ${escapeHtml(
+                                data.overall_trend ??
+                                "Unknown"
+                            )}
+                        </strong>
+                    </p>
 
-                </table>
+                </div>
+
+
+                <div class="card">
+
+                    <h3>
+                        Analysis Period
+                    </h3>
+
+                    <p>
+                        Last
+                        ${
+                            data.period_months ??
+                            3
+                        }
+                        months
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="card">
+
+                <h3>
+                    📊 Historical Condition Overview
+                </h3>
+
+                <p>
+                    ${escapeHtml(
+                        data.overview ??
+                        "No historical overview available."
+                    )}
+                </p>
+
+            </div>
+
+
+            <div class="card">
+
+                <h3>
+                    📅 Monthly Equipment Condition
+                </h3>
+
+                ${historyHtml}
+
+            </div>
+
+
+            <div class="card">
+
+                <h3>
+                    🚨 Immediate Actions
+                </h3>
+
+                ${immediateActionsHtml}
+
+            </div>
+
+
+            <div class="card">
+
+                <h3>
+                    💡 FuElectric-AI Recommendations
+                </h3>
+
+                ${recommendationsHtml}
+
+            </div>
+
+
+            <div class="card">
+
+                <h3>
+                    🔧 Activity Summary
+                </h3>
+
+                <p>
+                    <strong>
+                        Total Repairs:
+                    </strong>
+
+                    ${
+                        data.total_repairs ??
+                        0
+                    }
+                </p>
+
+                <p>
+                    <strong>
+                        Total Maintenance:
+                    </strong>
+
+                    ${
+                        data.total_maintenance ??
+                        0
+                    }
+                </p>
 
             </div>
 
@@ -7907,7 +8512,7 @@ async function loadEquipmentTrend() {
     catch (error) {
 
         console.error(
-            "Health trend error:",
+            "Historical equipment condition error:",
             error
         );
 
@@ -7915,11 +8520,13 @@ async function loadEquipmentTrend() {
 
             <div class="error">
 
-                ❌ Unable to load equipment health trend.
+                ❌ Unable to load historical equipment condition.
 
-                <br>
+                <br><br>
 
-                ${escapeHtml(error.message)}
+                ${escapeHtml(
+                    error.message
+                )}
 
             </div>
 

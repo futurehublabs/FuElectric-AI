@@ -4853,6 +4853,601 @@ def get_equipment_health_trend(equipment_id: str):
 
         conn.close()
 
+# ==========================================================
+# HISTORICAL EQUIPMENT CONDITION INTELLIGENCE
+# FuElectric-AI v3.5.4
+# ==========================================================
+
+def get_equipment_health_history(
+    equipment_id: str,
+    months: int = 3
+):
+    """
+    Generate historical equipment condition intelligence.
+
+    FuElectric-AI v3.5.4
+
+    Reconstructs monthly condition using recorded
+    maintenance and repair activity.
+
+    NOTE:
+    Historical health scores are calculated from
+    recorded maintenance and repair activity.
+    They are not direct sensor measurements.
+    """
+
+    conn = get_connection()
+
+    try:
+
+        # --------------------------------------------------
+        # VALIDATE PERIOD
+        # --------------------------------------------------
+
+        try:
+            months = int(months)
+        except (TypeError, ValueError):
+            months = 3
+
+        months = max(
+            1,
+            min(months, 12)
+        )
+
+        # --------------------------------------------------
+        # GET EQUIPMENT
+        # --------------------------------------------------
+
+        equipment = conn.execute("""
+            SELECT
+                equipment_id,
+                name,
+                category,
+                status
+            FROM equipment
+            WHERE equipment_id = ?
+        """, (equipment_id,)).fetchone()
+
+        if equipment is None:
+            return None
+
+        equipment = dict(equipment)
+
+        # --------------------------------------------------
+        # GET REPAIR HISTORY
+        # --------------------------------------------------
+
+        repairs = conn.execute("""
+            SELECT
+                repair_id,
+                repair_date,
+                repair_status,
+                fault_reported
+            FROM repairs
+            WHERE equipment_id = ?
+            ORDER BY repair_date ASC
+        """, (equipment_id,)).fetchall()
+
+        repairs = [
+            dict(row)
+            for row in repairs
+        ]
+
+        # --------------------------------------------------
+        # GET MAINTENANCE HISTORY
+        # --------------------------------------------------
+
+        maintenance = conn.execute("""
+            SELECT
+                id,
+                maintenance_date,
+                maintenance_type,
+                status
+            FROM maintenance_history
+            WHERE equipment_id = ?
+            ORDER BY maintenance_date ASC
+        """, (equipment_id,)).fetchall()
+
+        maintenance = [
+            dict(row)
+            for row in maintenance
+        ]
+
+    finally:
+
+        conn.close()
+
+    # ======================================================
+    # DATE HELPERS
+    # ======================================================
+
+    from datetime import datetime
+
+    def parse_date(value):
+
+        if not value:
+            return None
+
+        if isinstance(value, datetime):
+            return value
+
+        value = str(value).strip()
+
+        formats = [
+            "%Y-%m-%d",
+            "%Y-%m-%d %H:%M:%S",
+            "%Y-%m-%d %H:%M",
+            "%d-%m-%Y",
+            "%d/%m/%Y",
+            "%Y/%m/%d"
+        ]
+
+        for fmt in formats:
+
+            try:
+                return datetime.strptime(
+                    value,
+                    fmt
+                )
+
+            except ValueError:
+                continue
+
+        return None
+
+    # ======================================================
+    # COLLECT DATED RECORDS
+    # ======================================================
+
+    dated_records = []
+
+    for repair in repairs:
+
+        date = parse_date(
+            repair.get("repair_date")
+        )
+
+        if date:
+
+            dated_records.append({
+                "date": date,
+                "type": "repair",
+                "record": repair
+            })
+
+    for record in maintenance:
+
+        date = parse_date(
+            record.get("maintenance_date")
+        )
+
+        if date:
+
+            dated_records.append({
+                "date": date,
+                "type": "maintenance",
+                "record": record
+            })
+
+    # ------------------------------------------------------
+    # NO HISTORICAL DATA
+    # ------------------------------------------------------
+
+    if not dated_records:
+
+        return {
+            "equipment_id":
+                equipment["equipment_id"],
+
+            "equipment_name":
+                equipment["name"],
+
+            "category":
+                equipment["category"],
+
+            "equipment_status":
+                equipment["status"],
+
+            "period_months":
+                months,
+
+            "monthly_history":
+                [],
+
+            "trend":
+                "No Historical Data",
+
+            "change":
+                0,
+
+            "overall_assessment":
+                "There is not enough dated maintenance or repair "
+                "history to determine an equipment condition trend.",
+
+            "immediate_actions": [
+                "Begin recording equipment maintenance and repair activity.",
+                "Inspect the equipment and establish a current condition baseline."
+            ],
+
+            "recommendations": [
+                "Maintain consistent maintenance records.",
+                "Monitor equipment condition regularly."
+            ]
+        }
+
+    # ======================================================
+    # DETERMINE CURRENT MONTH
+    # ======================================================
+
+    all_dates = [
+        record["date"]
+        for record in dated_records
+    ]
+
+    latest_date = max(all_dates)
+
+    latest_year = latest_date.year
+    latest_month = latest_date.month
+
+    # ======================================================
+    # GENERATE MONTH WINDOWS
+    # ======================================================
+
+    month_windows = []
+
+    year = latest_year
+    month = latest_month
+
+    for _ in range(months):
+
+        month_windows.append(
+            (year, month)
+        )
+
+        month -= 1
+
+        if month == 0:
+            month = 12
+            year -= 1
+
+    month_windows.reverse()
+
+    # ======================================================
+    # HISTORICAL MONTHLY ANALYSIS
+    # ======================================================
+
+    monthly_history = []
+
+    for year, month in month_windows:
+
+        # --------------------------------------------------
+        # CUMULATIVE RECORDS UP TO THIS MONTH
+        # --------------------------------------------------
+
+        month_end_records = [
+            record
+            for record in dated_records
+            if (
+                record["date"].year < year
+                or (
+                    record["date"].year == year
+                    and record["date"].month <= month
+                )
+            )
+        ]
+
+        cumulative_repairs = sum(
+            1
+            for record in month_end_records
+            if record["type"] == "repair"
+        )
+
+        cumulative_maintenance = sum(
+            1
+            for record in month_end_records
+            if record["type"] == "maintenance"
+        )
+
+        # --------------------------------------------------
+        # CALCULATED HISTORICAL HEALTH
+        # --------------------------------------------------
+
+        health_score = 100
+
+        health_score -= (
+            cumulative_repairs * 10
+        )
+
+        health_score += (
+            cumulative_maintenance * 2
+        )
+
+        health_score = max(
+            0,
+            min(
+                100,
+                health_score
+            )
+        )
+
+        risk_score = 100 - health_score
+
+        # --------------------------------------------------
+        # CONDITION
+        # --------------------------------------------------
+
+        if health_score >= 90:
+            condition = "Excellent"
+
+        elif health_score >= 75:
+            condition = "Good"
+
+        elif health_score >= 50:
+            condition = "Fair"
+
+        else:
+            condition = "Poor"
+
+        # --------------------------------------------------
+        # MONTHLY ACTIVITY
+        # --------------------------------------------------
+
+        monthly_repairs = [
+            record
+            for record in dated_records
+            if (
+                record["type"] == "repair"
+                and record["date"].year == year
+                and record["date"].month == month
+            )
+        ]
+
+        monthly_maintenance = [
+            record
+            for record in dated_records
+            if (
+                record["type"] == "maintenance"
+                and record["date"].year == year
+                and record["date"].month == month
+            )
+        ]
+
+        monthly_history.append({
+
+            "year":
+                year,
+
+            "month":
+                month,
+
+            "month_name":
+                datetime(
+                    year,
+                    month,
+                    1
+                ).strftime("%B"),
+
+            "health_score":
+                round(
+                    health_score,
+                    1
+                ),
+
+            "risk_score":
+                round(
+                    risk_score,
+                    1
+                ),
+
+            "condition":
+                condition,
+
+            "repairs":
+                len(monthly_repairs),
+
+            "maintenance":
+                len(monthly_maintenance)
+
+        })
+
+    # ======================================================
+    # TREND ANALYSIS
+    # ======================================================
+
+    first_score = (
+        monthly_history[0]["health_score"]
+    )
+
+    last_score = (
+        monthly_history[-1]["health_score"]
+    )
+
+    change = round(
+        last_score - first_score,
+        1
+    )
+
+    if change <= -20:
+
+        trend = "Rapidly Deteriorating"
+
+    elif change <= -5:
+
+        trend = "Deteriorating"
+
+    elif change >= 5:
+
+        trend = "Improving"
+
+    else:
+
+        trend = "Stable"
+
+    # ======================================================
+    # OVERALL ASSESSMENT
+    # ======================================================
+
+    if trend == "Rapidly Deteriorating":
+
+        overall_assessment = (
+            "Equipment condition has deteriorated significantly "
+            "over the selected period. Immediate inspection and "
+            "maintenance intervention should be considered."
+        )
+
+    elif trend == "Deteriorating":
+
+        overall_assessment = (
+            "Equipment condition shows a downward trend over "
+            "the selected period. Increased monitoring and "
+            "preventive maintenance are recommended."
+        )
+
+    elif trend == "Improving":
+
+        overall_assessment = (
+            "Equipment condition is improving over the selected "
+            "period. The current maintenance approach appears "
+            "to be supporting equipment condition."
+        )
+
+    else:
+
+        overall_assessment = (
+            "Equipment condition has remained relatively stable "
+            "over the selected period. Continue routine monitoring "
+            "and maintenance."
+        )
+
+    # ======================================================
+    # IMMEDIATE ACTIONS
+    # ======================================================
+
+    immediate_actions = []
+
+    if trend in (
+        "Deteriorating",
+        "Rapidly Deteriorating"
+    ):
+
+        immediate_actions.append(
+            "Inspect the equipment for emerging faults or abnormal conditions."
+        )
+
+        immediate_actions.append(
+            "Review recent repair and maintenance records."
+        )
+
+        immediate_actions.append(
+            "Assess whether corrective maintenance is required."
+        )
+
+    elif trend == "Stable":
+
+        immediate_actions.append(
+            "Continue routine equipment monitoring."
+        )
+
+        immediate_actions.append(
+            "Maintain the existing preventive maintenance schedule."
+        )
+
+    elif trend == "Improving":
+
+        immediate_actions.append(
+            "Continue the current maintenance strategy."
+        )
+
+        immediate_actions.append(
+            "Monitor the equipment to confirm continued improvement."
+        )
+
+    # ======================================================
+    # RECOMMENDATIONS
+    # ======================================================
+
+    recommendations = []
+
+    if trend == "Rapidly Deteriorating":
+
+        recommendations.extend([
+            "Prioritize the equipment for maintenance review.",
+            "Investigate recurring repair causes.",
+            "Consider a detailed root-cause analysis.",
+            "Increase condition monitoring frequency."
+        ])
+
+    elif trend == "Deteriorating":
+
+        recommendations.extend([
+            "Increase monitoring frequency.",
+            "Schedule preventive maintenance.",
+            "Investigate recurring faults.",
+            "Review maintenance effectiveness."
+        ])
+
+    elif trend == "Improving":
+
+        recommendations.extend([
+            "Continue the current preventive maintenance strategy.",
+            "Track future condition changes.",
+            "Maintain accurate maintenance records."
+        ])
+
+    else:
+
+        recommendations.extend([
+            "Continue routine monitoring.",
+            "Maintain preventive maintenance activities.",
+            "Keep equipment records up to date."
+        ])
+
+    # ======================================================
+    # FINAL RESPONSE
+    # ======================================================
+
+    return {
+
+        "equipment_id":
+            equipment["equipment_id"],
+
+        "equipment_name":
+            equipment["name"],
+
+        "category":
+            equipment["category"],
+
+        "equipment_status":
+            equipment["status"],
+
+        "period_months":
+            months,
+
+        "monthly_history":
+            monthly_history,
+
+        "starting_health_score":
+            first_score,
+
+        "current_health_score":
+            last_score,
+
+        "change":
+            change,
+
+        "trend":
+            trend,
+
+        "overall_assessment":
+            overall_assessment,
+
+        "immediate_actions":
+            immediate_actions,
+
+        "recommendations":
+            recommendations
+
+    }
 
 # ==========================================================
 # EQUIPMENT RISK RANKING — FuElectric-AI v3.5.4
