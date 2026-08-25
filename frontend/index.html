@@ -255,6 +255,135 @@ footer{background:#101827;color:#cbd5e1;text-align:center;padding:24px}pre{white
     </section>
 
     <!-- ==================================================
+     HEALTH & RISK INTELLIGENCE — FuElectric-AI v3.5.4
+     ================================================== -->
+
+<section class="health-risk-intelligence">
+
+    <div class="section-header">
+
+        <div>
+
+            <h2>
+                🧠 Health & Risk Intelligence
+            </h2>
+
+            <p>
+                Monitor equipment health trends,
+                identify high-risk equipment and
+                detect deterioration.
+            </p>
+
+        </div>
+
+        <button
+            type="button"
+            class="secondary-btn"
+            onclick="refreshHealthRiskIntelligence()"
+        >
+            🔄 Refresh Intelligence
+        </button>
+
+    </div>
+
+
+    <!-- ==================================================
+         HEALTH & RISK SUMMARY
+         ================================================== -->
+
+    <div class="intelligence-panel">
+
+        <h3>
+            📊 Health & Risk Summary
+        </h3>
+
+        <div id="health-risk-summary">
+
+            <div class="info">
+                Loading health & risk summary...
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ==================================================
+         EQUIPMENT HEALTH TREND
+         ================================================== -->
+
+    <div class="intelligence-panel">
+
+        <h3>
+            📈 Equipment Health Trend
+        </h3>
+
+        <select
+            id="health-trend-equipment-select"
+        >
+
+            <option value="">
+                Select Equipment
+            </option>
+
+        </select>
+
+
+        <div id="equipment-health-trend">
+
+            <div class="info">
+                Select equipment to view health trend.
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ==================================================
+         EQUIPMENT RISK RANKING
+         ================================================== -->
+
+    <div class="intelligence-panel">
+
+        <h3>
+            ⚠️ Equipment Risk Ranking
+        </h3>
+
+        <div id="equipment-risk-ranking">
+
+            <div class="info">
+                Loading equipment risk ranking...
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ==================================================
+         DETERIORATING EQUIPMENT
+         ================================================== -->
+
+    <div class="intelligence-panel">
+
+        <h3>
+            📉 Deteriorating Equipment
+        </h3>
+
+        <div id="deteriorating-equipment">
+
+            <div class="info">
+                Detecting deteriorating equipment...
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+    <!-- ==================================================
      EQUIPMENT RELIABILITY ANALYTICS — v3.5.3
      ================================================== -->
 
@@ -403,6 +532,125 @@ footer{background:#101827;color:#cbd5e1;text-align:center;padding:24px}pre{white
 
             <p>
                 Select equipment to view reliability.
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+<!-- ==========================================================
+     HEALTH & RISK ANALYTICS — v3.5.4
+========================================================== -->
+
+<section class="health-risk-section">
+
+    <h2>
+        ❤️ Health & Risk Analytics
+    </h2>
+
+    <p>
+        Monitor equipment risk levels, trends,
+        deteriorating equipment and maintenance priorities.
+    </p>
+
+    <!-- SUMMARY -->
+
+    <div class="dashboard">
+
+        <div class="card">
+            <h3>Total Equipment</h3>
+            <p id="risk-total-equipment">--</p>
+        </div>
+
+        <div class="card">
+            <h3>Average Health</h3>
+            <p id="risk-average-health">--</p>
+        </div>
+
+        <div class="card">
+            <h3>Average Risk</h3>
+            <p id="risk-average-score">--</p>
+        </div>
+
+        <div class="card">
+            <h3>Low Risk</h3>
+            <p id="risk-low">--</p>
+        </div>
+
+        <div class="card">
+            <h3>Medium Risk</h3>
+            <p id="risk-medium">--</p>
+        </div>
+
+        <div class="card">
+            <h3>High Risk</h3>
+            <p id="risk-high">--</p>
+        </div>
+
+    </div>
+
+    <!-- RISK RANKING -->
+
+    <div class="intelligence-panel">
+
+        <h3>
+            ⚠️ Equipment Risk Ranking
+        </h3>
+
+        <div id="risk-ranking-list">
+
+            <p>
+                Loading risk ranking...
+            </p>
+
+        </div>
+
+    </div>
+
+    <!-- DETERIORATING -->
+
+    <div class="intelligence-panel">
+
+        <h3>
+            📉 Deteriorating Equipment
+        </h3>
+
+        <div id="deteriorating-equipment-list">
+
+            <p>
+                Loading deteriorating equipment...
+            </p>
+
+        </div>
+
+    </div>
+
+    <!-- SINGLE EQUIPMENT -->
+
+    <div class="intelligence-panel">
+
+        <h3>
+            🔍 Equipment Health Trend
+        </h3>
+
+        <select id="health-trend-equipment">
+
+            <option value="">
+                Select Equipment
+            </option>
+
+        </select>
+
+        <button onclick="loadEquipmentTrend()">
+            Analyze
+        </button>
+
+        <div id="health-trend-result">
+
+            <p>
+                Select equipment.
             </p>
 
         </div>

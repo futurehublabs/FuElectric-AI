@@ -42,6 +42,29 @@ function escapeHtml(value) {
 
 }
 
+// ==========================================================
+// API JSON HELPER
+// ==========================================================
+
+async function fetchJson(endpoint) {
+
+    const response =
+        await fetch(
+            `${API_URL}${endpoint}`
+        );
+
+    if (!response.ok) {
+
+        throw new Error(
+            `API request failed: ${response.status} ${response.statusText}`
+        );
+
+    }
+
+    return await response.json();
+
+}
+
 
 function escapeJs(value) {
 
@@ -391,7 +414,14 @@ async function loadEquipment() {
             equipmentData
         );
 
+        populateEquipmentSelector(
+            "health-trend-equipment-select",
+            equipmentData
+);
+
     }
+
+        
 
     catch (error) {
 
@@ -757,7 +787,7 @@ async function saveEquipment(event) {
         );
 
 
-        await loadEquipment();
+        Equipment();
 
         await loadDashboard();
 
@@ -1189,6 +1219,7 @@ function loadEquipmentHealth() {
         };
 
 }
+
 
 
 // ==========================================================
@@ -3458,6 +3489,831 @@ async function loadTechnicianWorkloadIntelligence() {
 }
 
 // ==========================================================
+// HEALTH & RISK INTELLIGENCE — FuElectric-AI v3.5.4
+// ==========================================================
+
+
+// ----------------------------------------------------------
+// HEALTH & RISK SUMMARY
+// ----------------------------------------------------------
+
+async function loadHealthRiskSummary() {
+
+    const container =
+        document.getElementById(
+            "risk-summary"
+        ) ||
+        document.getElementById(
+            "health-risk-summary"
+        );
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="info">
+            🧠 Loading health & risk summary...
+        </div>
+    `;
+
+    try {
+
+        const response =
+            await fetch(
+                `${API_URL}/health-risk-summary`
+            );
+
+        if (!response.ok) {
+
+            throw new Error(
+                `Health & risk summary request failed: ${response.status}`
+            );
+
+        }
+
+        const data =
+            await response.json();
+
+        const summary =
+            data.summary ||
+            data;
+
+        const totalEquipment =
+            summary.total_equipment ??
+            summary.equipment_count ??
+            0;
+
+        const averageHealth =
+            summary.average_health ??
+            summary.average_health_score ??
+            "--";
+
+        const averageRisk =
+            summary.average_risk ??
+            summary.average_risk_score ??
+            "--";
+
+        const lowRisk =
+            summary.low_risk ??
+            summary.low_risk_equipment ??
+            0;
+
+        const mediumRisk =
+            summary.medium_risk ??
+            summary.medium_risk_equipment ??
+            0;
+
+        const highRisk =
+            summary.high_risk ??
+            summary.high_risk_equipment ??
+            0;
+
+        container.innerHTML = `
+
+            <div class="performance-grid">
+
+                <div>
+                    <strong>
+                        Total Equipment
+                    </strong>
+
+                    <span>
+                        ${escapeHtml(totalEquipment)}
+                    </span>
+                </div>
+
+                <div>
+                    <strong>
+                        Average Health
+                    </strong>
+
+                    <span>
+                        ${escapeHtml(averageHealth)}
+                        ${
+                            averageHealth !== "--"
+                                ? "%"
+                                : ""
+                        }
+                    </span>
+                </div>
+
+                <div>
+                    <strong>
+                        Average Risk
+                    </strong>
+
+                    <span>
+                        ${escapeHtml(averageRisk)}
+                    </span>
+                </div>
+
+                <div>
+                    <strong>
+                        Low Risk
+                    </strong>
+
+                    <span>
+                        ${escapeHtml(lowRisk)}
+                    </span>
+                </div>
+
+                <div>
+                    <strong>
+                        Medium Risk
+                    </strong>
+
+                    <span>
+                        ${escapeHtml(mediumRisk)}
+                    </span>
+                </div>
+
+                <div>
+                    <strong>
+                        High Risk
+                    </strong>
+
+                    <span>
+                        ${escapeHtml(highRisk)}
+                    </span>
+                </div>
+
+            </div>
+
+        `;
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Health Risk Summary Error:",
+            error
+        );
+
+        container.innerHTML = `
+            <div class="error">
+
+                ❌ Unable to load health & risk summary.
+
+                <br>
+
+                ${escapeHtml(error.message)}
+
+            </div>
+        `;
+
+    }
+
+}
+
+
+// ----------------------------------------------------------
+// EQUIPMENT RISK RANKING
+// ----------------------------------------------------------
+
+async function loadEquipmentRiskRanking() {
+
+    const container =
+        document.getElementById(
+            "risk-ranking-list"
+        ) ||
+        document.getElementById(
+            "equipment-risk-ranking"
+        );
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="info">
+            ⚠️ Loading equipment risk ranking...
+        </div>
+    `;
+
+    try {
+
+        const response =
+            await fetch(
+                `${API_URL}/equipment-risk-ranking`
+            );
+
+        if (!response.ok) {
+
+            throw new Error(
+                `Equipment risk ranking request failed: ${response.status}`
+            );
+
+        }
+
+        const data =
+            await response.json();
+
+        const ranking =
+            data.ranking ||
+            data.equipment ||
+            data.results ||
+            data ||
+            [];
+
+        if (
+            !Array.isArray(ranking) ||
+            ranking.length === 0
+        ) {
+
+            container.innerHTML = `
+                <div class="success">
+                    ✅ No equipment risk data available.
+                </div>
+            `;
+
+            return;
+        }
+
+        container.innerHTML = `
+
+            <div class="table-container">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+                            <th>Rank</th>
+                            <th>Equipment</th>
+                            <th>Risk Score</th>
+                            <th>Risk Level</th>
+                            <th>Health Score</th>
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        ${ranking.map(
+                            (item, index) => {
+
+                                const health =
+                                    item.health_score ??
+                                    item.health ??
+                                    null;
+
+                                return `
+
+                                    <tr>
+
+                                        <td>
+                                            <strong>
+                                                ${index + 1}
+                                            </strong>
+                                        </td>
+
+                                        <td>
+
+                                            <strong>
+                                                ${escapeHtml(
+                                                    item.name ||
+                                                    item.equipment_name ||
+                                                    item.equipment_id ||
+                                                    "Unknown"
+                                                )}
+                                            </strong>
+
+                                            <br>
+
+                                            <small>
+                                                ${escapeHtml(
+                                                    item.equipment_id ||
+                                                    ""
+                                                )}
+                                            </small>
+
+                                        </td>
+
+                                        <td>
+                                            ${escapeHtml(
+                                                item.risk_score ??
+                                                item.score ??
+                                                0
+                                            )}
+                                        </td>
+
+                                        <td>
+
+                                            <span class="badge">
+
+                                                ${escapeHtml(
+                                                    item.risk_level ||
+                                                    item.risk ||
+                                                    "Unknown"
+                                                )}
+
+                                            </span>
+
+                                        </td>
+
+                                        <td>
+
+                                            ${
+                                                health !== null
+                                                    ? `${escapeHtml(health)}%`
+                                                    : "N/A"
+                                            }
+
+                                        </td>
+
+                                    </tr>
+
+                                `;
+
+                            }
+                        ).join("")}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        `;
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Equipment Risk Ranking Error:",
+            error
+        );
+
+        container.innerHTML = `
+            <div class="error">
+
+                ❌ Unable to load equipment risk ranking.
+
+                <br>
+
+                ${escapeHtml(error.message)}
+
+            </div>
+        `;
+
+    }
+
+}
+
+
+// ----------------------------------------------------------
+// DETERIORATING EQUIPMENT
+// ----------------------------------------------------------
+
+async function loadDeterioratingEquipment() {
+
+    const container =
+        document.getElementById(
+            "deteriorating-equipment-list"
+        ) ||
+        document.getElementById(
+            "deteriorating-equipment"
+        );
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="info">
+            📉 Detecting deteriorating equipment...
+        </div>
+    `;
+
+    try {
+
+        const response =
+            await fetch(
+                `${API_URL}/deteriorating-equipment`
+            );
+
+        if (!response.ok) {
+
+            throw new Error(
+                `Deteriorating equipment request failed: ${response.status}`
+            );
+
+        }
+
+        const data =
+            await response.json();
+
+        const equipment =
+            data.equipment ||
+            data.deteriorating_equipment ||
+            data.results ||
+            data ||
+            [];
+
+        if (
+            !Array.isArray(equipment) ||
+            equipment.length === 0
+        ) {
+
+            container.innerHTML = `
+                <div class="success">
+
+                    ✅ No deteriorating equipment detected.
+
+                </div>
+            `;
+
+            return;
+        }
+
+        container.innerHTML = `
+
+            <div class="intelligence-grid">
+
+                ${equipment.map(item => `
+
+                    <div class="intelligence-card">
+
+                        <h3>
+                            📉
+                            ${escapeHtml(
+                                item.name ||
+                                item.equipment_name ||
+                                item.equipment_id ||
+                                "Equipment"
+                            )}
+                        </h3>
+
+                        <p>
+
+                            <strong>
+                                Equipment ID
+                            </strong>
+
+                            <br>
+
+                            ${escapeHtml(
+                                item.equipment_id ||
+                                "N/A"
+                            )}
+
+                        </p>
+
+                        <p>
+
+                            <strong>
+                                Health Score
+                            </strong>
+
+                            <br>
+
+                            ${
+                                item.health_score ??
+                                item.health ??
+                                "N/A"
+                            }
+
+                            ${
+                                (
+                                    item.health_score ??
+                                    item.health
+                                ) !== "N/A"
+                                    ? "%"
+                                    : ""
+                            }
+
+                        </p>
+
+                        <p>
+
+                            <strong>
+                                Risk Level
+                            </strong>
+
+                            <br>
+
+                            ${escapeHtml(
+                                item.risk_level ||
+                                item.risk ||
+                                "Unknown"
+                            )}
+
+                        </p>
+
+                        <p>
+
+                            <strong>
+                                Trend
+                            </strong>
+
+                            <br>
+
+                            ${escapeHtml(
+                                item.trend ||
+                                item.health_trend ||
+                                "Deteriorating"
+                            )}
+
+                        </p>
+
+                    </div>
+
+                `).join("")}
+
+            </div>
+
+        `;
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Deteriorating Equipment Error:",
+            error
+        );
+
+        container.innerHTML = `
+            <div class="error">
+
+                ❌ Unable to load deteriorating equipment.
+
+                <br>
+
+                ${escapeHtml(error.message)}
+
+            </div>
+        `;
+
+    }
+
+}
+
+
+// ----------------------------------------------------------
+// EQUIPMENT HEALTH TREND
+// ----------------------------------------------------------
+
+async function loadEquipmentTrend() {
+
+    const selector =
+        document.getElementById(
+            "health-trend-equipment"
+        );
+
+    const container =
+        document.getElementById(
+            "health-trend-result"
+        );
+
+    if (!selector || !container) {
+        return;
+    }
+
+    const equipmentId =
+        selector.value;
+
+    if (!equipmentId) {
+
+        container.innerHTML = `
+            <div class="info">
+                Select equipment to view health trend.
+            </div>
+        `;
+
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="info">
+            📈 Loading equipment health trend...
+        </div>
+    `;
+
+    try {
+
+        const response =
+            await fetch(
+                `${API_URL}/equipment/${encodeURIComponent(
+                    equipmentId
+                )}/health-trend`
+            );
+
+        if (!response.ok) {
+
+            const errorData =
+                await response.json()
+                    .catch(() => ({}));
+
+            throw new Error(
+                errorData.detail ||
+                `Health trend request failed: ${response.status}`
+            );
+
+        }
+
+        const data =
+            await response.json();
+
+        const trend =
+            data.trend ||
+            data.health_trend ||
+            data.history ||
+            [];
+
+        if (
+            Array.isArray(trend) &&
+            trend.length === 0
+        ) {
+
+            container.innerHTML = `
+                <div class="info">
+
+                    ℹ️ No health trend data available
+                    for this equipment yet.
+
+                </div>
+            `;
+
+            return;
+        }
+
+        if (Array.isArray(trend)) {
+
+            container.innerHTML = `
+
+                <div class="table-container">
+
+                    <table>
+
+                        <thead>
+
+                            <tr>
+                                <th>Date</th>
+                                <th>Health Score</th>
+                                <th>Status</th>
+                            </tr>
+
+                        </thead>
+
+                        <tbody>
+
+                            ${trend.map(item => `
+
+                                <tr>
+
+                                    <td>
+                                        ${escapeHtml(
+                                            item.date ||
+                                            item.timestamp ||
+                                            item.recorded_at ||
+                                            "N/A"
+                                        )}
+                                    </td>
+
+                                    <td>
+                                        <strong>
+                                            ${
+                                                item.health_score ??
+                                                item.score ??
+                                                0
+                                            }%
+                                        </strong>
+                                    </td>
+
+                                    <td>
+                                        ${escapeHtml(
+                                            item.status ||
+                                            "Unknown"
+                                        )}
+                                    </td>
+
+                                </tr>
+
+                            `).join("")}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            `;
+
+        }
+
+        else {
+
+            container.innerHTML = `
+                <div class="intelligence-panel">
+
+                    <pre>
+${escapeHtml(
+    JSON.stringify(data, null, 2)
+)}
+                    </pre>
+
+                </div>
+            `;
+
+        }
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Equipment Health Trend Error:",
+            error
+        );
+
+        container.innerHTML = `
+            <div class="error">
+
+                ❌ Unable to load equipment health trend.
+
+                <br>
+
+                ${escapeHtml(error.message)}
+
+            </div>
+        `;
+
+    }
+
+}
+
+
+// ----------------------------------------------------------
+// LOAD ALL v3.5.4 INTELLIGENCE
+// ----------------------------------------------------------
+
+async function loadHealthRiskIntelligence() {
+
+    await Promise.all([
+        loadHealthRiskSummary(),
+        loadEquipmentRiskRanking(),
+        loadDeterioratingEquipment()
+    ]);
+
+}
+
+
+// ----------------------------------------------------------
+// INITIALIZE v3.5.4 EQUIPMENT SELECTOR
+// ----------------------------------------------------------
+
+function initializeHealthRiskSelectors() {
+
+    const selector =
+        document.getElementById(
+            "health-trend-equipment"
+        );
+
+    if (!selector) {
+        return;
+    }
+
+    populateEquipmentSelector(
+        "health-trend-equipment",
+        equipmentData
+    );
+
+}
+
+
+// ----------------------------------------------------------
+// REFRESH v3.5.4
+// ----------------------------------------------------------
+
+async function refreshHealthRiskIntelligence() {
+
+    await loadHealthRiskIntelligence();
+
+    const selector =
+        document.getElementById(
+            "health-trend-equipment"
+        );
+
+    if (
+        selector &&
+        selector.value
+    ) {
+
+        await loadEquipmentTrend();
+
+    }
+
+    showMessage(
+        "Health & Risk Intelligence refreshed successfully."
+    );
+
+}
+
+// ==========================================================
 // BUTTON MESSAGES
 // ==========================================================
 
@@ -3554,6 +4410,9 @@ window.addEventListener(
 
         await loadEquipment();
 
+        initializeHealthTrendSelector();
+        await loadHealthRiskIntelligence();
+
 
         // --------------------------------------------------
         // WORK ORDERS
@@ -3585,6 +4444,8 @@ window.addEventListener(
 
         loadEquipmentHealth();
 
+        
+
 
         // --------------------------------------------------
         // AI DIAGNOSIS
@@ -3599,6 +4460,13 @@ window.addEventListener(
 
         await loadMaintenanceAlerts();
 
+        // --------------------------------------------------
+       // HEALTH & RISK INTELLIGENCE — v3.5.4
+      // --------------------------------------------------
+
+        await loadHealthRiskIntelligence();
+
+        initializeHealthRiskSelectors();
 
         // --------------------------------------------------
         // APPLICATION READY
@@ -4159,11 +5027,3023 @@ console.log("INSIGHTS ARRAY CREATED:", insights);
 
 }
 
-
-    
-
-
-    
+// ==========================================================
+// HEALTH & RISK INTELLIGENCE — FuElectric-AI v3.5.4
+// ==========================================================
 
 
+// ----------------------------------------------------------
+// EQUIPMENT HEALTH TREND
+// ----------------------------------------------------------
 
+async function loadEquipmentHealthTrend() {
+
+    const selector =
+        document.getElementById(
+            "health-trend-equipment-select"
+        );
+
+    const container =
+        document.getElementById(
+            "equipment-health-trend"
+        );
+
+    if (!selector || !container) {
+        return;
+    }
+
+    const equipmentId =
+        selector.value;
+
+    if (!equipmentId) {
+
+        container.innerHTML = `
+            <div class="info">
+                📈 Select equipment to view health trend.
+            </div>
+        `;
+
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="info">
+            📈 Loading equipment health trend...
+        </div>
+    `;
+
+    try {
+
+        const response =
+            await fetch(
+                `${API_URL}/equipment/${encodeURIComponent(
+                    equipmentId
+                )}/health-trend`
+            );
+
+        const data =
+            await response.json();
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.detail ||
+                "Health trend request failed."
+            );
+
+        }
+
+        const trend =
+            data.trend ||
+            data.health_trend ||
+            data.history ||
+            [];
+
+        if (
+            !Array.isArray(trend) ||
+            trend.length === 0
+        ) {
+
+            container.innerHTML = `
+                <div class="info">
+                    ℹ️ No health trend data available
+                    for this equipment yet.
+                </div>
+            `;
+
+            return;
+        }
+
+        container.innerHTML = `
+
+            <div class="table-container">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+                            <th>Date</th>
+                            <th>Health Score</th>
+                            <th>Status</th>
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        ${trend.map(item => `
+
+                            <tr>
+
+                                <td>
+                                    ${escapeHtml(
+                                        item.date ||
+                                        item.timestamp ||
+                                        item.recorded_at ||
+                                        "N/A"
+                                    )}
+                                </td>
+
+                                <td>
+
+                                    <strong>
+                                        ${
+                                            item.health_score ??
+                                            item.score ??
+                                            0
+                                        }%
+                                    </strong>
+
+                                </td>
+
+                                <td>
+                                    ${escapeHtml(
+                                        item.status ||
+                                        "Unknown"
+                                    )}
+                                </td>
+
+                            </tr>
+
+                        `).join("")}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        `;
+
+    }
+    catch (error) {
+
+        console.error(
+            "Equipment Health Trend Error:",
+            error
+        );
+
+        container.innerHTML = `
+            <div class="error">
+
+                ❌ Unable to load equipment health trend.
+
+                <br><br>
+
+                ${escapeHtml(
+                    error.message
+                )}
+
+            </div>
+        `;
+
+    }
+
+}
+
+
+// ----------------------------------------------------------
+// EQUIPMENT RISK RANKING
+// ----------------------------------------------------------
+
+async function loadEquipmentRiskRanking() {
+
+    const container =
+        document.getElementById(
+            "equipment-risk-ranking"
+        );
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="info">
+            ⚠️ Loading equipment risk ranking...
+        </div>
+    `;
+
+    try {
+
+        const response =
+            await fetch(
+                `${API_URL}/equipment-risk-ranking`
+            );
+
+        const data =
+            await response.json();
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.detail ||
+                "Equipment risk ranking request failed."
+            );
+
+        }
+
+        const ranking =
+            data.ranking ||
+            data.equipment ||
+            data.results ||
+            data ||
+            [];
+
+        if (
+            !Array.isArray(ranking) ||
+            ranking.length === 0
+        ) {
+
+            container.innerHTML = `
+                <div class="success">
+                    ✅ No equipment risk data available.
+                </div>
+            `;
+
+            return;
+        }
+
+        container.innerHTML = `
+
+            <div class="table-container">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+                            <th>Rank</th>
+                            <th>Equipment</th>
+                            <th>Risk Score</th>
+                            <th>Risk Level</th>
+                            <th>Health Score</th>
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        ${ranking.map((item, index) => `
+
+                            <tr>
+
+                                <td>
+                                    <strong>
+                                        ${index + 1}
+                                    </strong>
+                                </td>
+
+                                <td>
+
+                                    <strong>
+                                        ${escapeHtml(
+                                            item.name ||
+                                            item.equipment_name ||
+                                            item.equipment_id ||
+                                            "Unknown"
+                                        )}
+                                    </strong>
+
+                                    <br>
+
+                                    <small>
+                                        ${escapeHtml(
+                                            item.equipment_id ||
+                                            ""
+                                        )}
+                                    </small>
+
+                                </td>
+
+                                <td>
+                                    ${
+                                        item.risk_score ??
+                                        item.score ??
+                                        0
+                                    }
+                                </td>
+
+                                <td>
+
+                                    <span class="badge">
+                                        ${escapeHtml(
+                                            item.risk_level ||
+                                            item.risk ||
+                                            "Unknown"
+                                        )}
+                                    </span>
+
+                                </td>
+
+                                <td>
+
+                                    ${
+                                        item.health_score ??
+                                        item.health ??
+                                        "N/A"
+                                    }
+
+                                    ${
+                                        (
+                                            item.health_score ??
+                                            item.health
+                                        ) !== "N/A"
+                                            ? "%"
+                                            : ""
+                                    }
+
+                                </td>
+
+                            </tr>
+
+                        `).join("")}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        `;
+
+    }
+    catch (error) {
+
+        console.error(
+            "Equipment Risk Ranking Error:",
+            error
+        );
+
+        container.innerHTML = `
+            <div class="error">
+
+                ❌ Unable to load equipment risk ranking.
+
+                <br><br>
+
+                ${escapeHtml(
+                    error.message
+                )}
+
+            </div>
+        `;
+
+    }
+
+}
+
+
+// ----------------------------------------------------------
+// HEALTH & RISK SUMMARY
+// ----------------------------------------------------------
+
+async function loadHealthRiskSummary() {
+
+    const container =
+        document.getElementById(
+            "health-risk-summary"
+        );
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="info">
+            🧠 Loading health & risk summary...
+        </div>
+    `;
+
+    try {
+
+        const response =
+            await fetch(
+                `${API_URL}/health-risk-summary`
+            );
+
+        const data =
+            await response.json();
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.detail ||
+                "Health & risk summary request failed."
+            );
+
+        }
+
+        const summary =
+            data.summary ||
+            data;
+
+        container.innerHTML = `
+
+            <div class="performance-grid">
+
+                <div>
+                    <strong>
+                        Total Equipment
+                    </strong>
+
+                    <span>
+                        ${
+                            summary.total_equipment ??
+                            summary.equipment_count ??
+                            0
+                        }
+                    </span>
+                </div>
+
+
+                <div>
+                    <strong>
+                        High Risk
+                    </strong>
+
+                    <span>
+                        ${
+                            summary.high_risk ??
+                            summary.high_risk_equipment ??
+                            0
+                        }
+                    </span>
+                </div>
+
+
+                <div>
+                    <strong>
+                        Critical Risk
+                    </strong>
+
+                    <span>
+                        ${
+                            summary.critical_risk ??
+                            summary.critical_risk_equipment ??
+                            0
+                        }
+                    </span>
+                </div>
+
+
+                <div>
+                    <strong>
+                        Healthy Equipment
+                    </strong>
+
+                    <span>
+                        ${
+                            summary.healthy_equipment ??
+                            summary.healthy ??
+                            0
+                        }
+                    </span>
+                </div>
+
+
+                <div>
+                    <strong>
+                        Deteriorating
+                    </strong>
+
+                    <span>
+                        ${
+                            summary.deteriorating ??
+                            summary.deteriorating_equipment ??
+                            0
+                        }
+                    </span>
+                </div>
+
+            </div>
+
+
+            <details>
+
+                <summary>
+                    View health & risk data
+                </summary>
+
+                <pre>
+${escapeHtml(
+    JSON.stringify(
+        summary,
+        null,
+        2
+    )
+)}
+                </pre>
+
+            </details>
+
+        `;
+
+    }
+    catch (error) {
+
+        console.error(
+            "Health Risk Summary Error:",
+            error
+        );
+
+        container.innerHTML = `
+            <div class="error">
+
+                ❌ Unable to load health & risk summary.
+
+                <br><br>
+
+                ${escapeHtml(
+                    error.message
+                )}
+
+            </div>
+        `;
+
+    }
+
+}
+
+
+// ----------------------------------------------------------
+// DETERIORATING EQUIPMENT
+// ----------------------------------------------------------
+
+async function loadDeterioratingEquipment() {
+
+    const container =
+        document.getElementById(
+            "deteriorating-equipment"
+        );
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="info">
+            📉 Detecting deteriorating equipment...
+        </div>
+    `;
+
+    try {
+
+        const response =
+            await fetch(
+                `${API_URL}/deteriorating-equipment`
+            );
+
+        const data =
+            await response.json();
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.detail ||
+                "Deteriorating equipment request failed."
+            );
+
+        }
+
+        const equipment =
+            data.equipment ||
+            data.deteriorating_equipment ||
+            data.results ||
+            data ||
+            [];
+
+        if (
+            !Array.isArray(equipment) ||
+            equipment.length === 0
+        ) {
+
+            container.innerHTML = `
+                <div class="success">
+
+                    ✅ No deteriorating equipment
+                    detected.
+
+                </div>
+            `;
+
+            return;
+        }
+
+        container.innerHTML = `
+
+            <div class="intelligence-grid">
+
+                ${equipment.map(item => `
+
+                    <div class="intelligence-card">
+
+                        <h3>
+                            📉
+                            ${escapeHtml(
+                                item.name ||
+                                item.equipment_name ||
+                                item.equipment_id ||
+                                "Equipment"
+                            )}
+                        </h3>
+
+
+                        <p>
+
+                            <strong>
+                                Equipment ID
+                            </strong>
+
+                            <br>
+
+                            ${escapeHtml(
+                                item.equipment_id ||
+                                "N/A"
+                            )}
+
+                        </p>
+
+
+                        <p>
+
+                            <strong>
+                                Health Score
+                            </strong>
+
+                            <br>
+
+                            ${
+                                item.health_score ??
+                                item.health ??
+                                "N/A"
+                            }
+
+                            ${
+                                (
+                                    item.health_score ??
+                                    item.health
+                                ) !== "N/A"
+                                    ? "%"
+                                    : ""
+                            }
+
+                        </p>
+
+
+                        <p>
+
+                            <strong>
+                                Risk Level
+                            </strong>
+
+                            <br>
+
+                            ${escapeHtml(
+                                item.risk_level ||
+                                item.risk ||
+                                "Unknown"
+                            )}
+
+                        </p>
+
+
+                        <p>
+
+                            <strong>
+                                Trend
+                            </strong>
+
+                            <br>
+
+                            ${escapeHtml(
+                                item.trend ||
+                                item.health_trend ||
+                                "Deteriorating"
+                            )}
+
+                        </p>
+
+                    </div>
+
+                `).join("")}
+
+            </div>
+
+        `;
+
+    }
+    catch (error) {
+
+        console.error(
+            "Deteriorating Equipment Error:",
+            error
+        );
+
+        container.innerHTML = `
+            <div class="error">
+
+                ❌ Unable to load deteriorating equipment.
+
+                <br><br>
+
+                ${escapeHtml(
+                    error.message
+                )}
+
+            </div>
+        `;
+
+    }
+
+}
+
+// ---------------------------------------------------------
+// LOAD ALL v3.5.4 INTELLIGENCE
+// ----------------------------------------------------------
+
+async function loadHealthRiskIntelligence() {
+
+
+    await Promise.all([
+        loadHealthRiskSummary(),
+        loadEquipmentRiskRanking(),
+        loadDeterioratingEquipment()
+    ]);
+
+}
+
+
+// ----------------------------------------------------------
+// HEALTH TREND SELECTOR
+// ----------------------------------------------------------
+
+function initializeHealthTrendSelector() {
+
+    const selector =
+        document.getElementById(
+            "health-trend-equipment-select"
+        );
+
+    if (!selector) {
+        return;
+    }
+
+    selector.onchange =
+        loadEquipmentHealthTrend;
+
+}
+
+
+// ----------------------------------------------------------
+// REFRESH v3.5.4
+// ----------------------------------------------------------
+
+async function refreshHealthRiskIntelligence() {
+
+    await loadHealthRiskIntelligence();
+
+    const selector =
+        document.getElementById(
+            "health-trend-equipment-select"
+        );
+
+    if (
+        selector &&
+        selector.value
+    ) {
+
+        await loadEquipmentHealthTrend();
+
+    }
+
+    showMessage(
+        "Health & Risk Intelligence refreshed successfully."
+    );
+
+}
+
+// ==========================================================
+// FuElectric-AI v3.5.3 + v3.5.4
+// EQUIPMENT RELIABILITY + HEALTH & RISK FRONTEND
+// ==========================================================
+
+
+// ==========================================================
+// v3.5.3 — EQUIPMENT RELIABILITY ANALYTICS
+// ==========================================================
+
+async function loadReliabilityAnalytics() {
+
+    const rankingContainer =
+        document.getElementById(
+            "reliability-ranking-list"
+        );
+
+    if (!rankingContainer) {
+        console.error(
+            "Reliability ranking container not found."
+        );
+        return;
+    }
+
+    rankingContainer.innerHTML =
+        `<p class="loading">
+            Loading reliability analytics...
+        </p>`;
+
+    try {
+
+        const response = await fetch(
+            `${API_URL}/reliability/analytics`
+        );
+
+        if (!response.ok) {
+
+            throw new Error(
+                `Reliability request failed: ${response.status}`
+            );
+
+        }
+
+        const data =
+            await response.json();
+
+        console.log(
+            "Reliability Analytics:",
+            data
+        );
+
+        // --------------------------------------------------
+        // SUMMARY
+        // --------------------------------------------------
+
+        setElementText(
+            "reliability-total-equipment",
+            data.total_equipment ?? 0
+        );
+
+        setElementText(
+            "reliability-average-score",
+            data.average_reliability !== undefined
+                ? `${Number(data.average_reliability).toFixed(1)}%`
+                : "--"
+        );
+
+        setElementText(
+            "reliability-highly-reliable",
+            data.highly_reliable ?? 0
+        );
+
+        setElementText(
+            "reliability-reliable",
+            data.reliable ?? 0
+        );
+
+        setElementText(
+            "reliability-moderate",
+            data.moderate ?? 0
+        );
+
+        setElementText(
+            "reliability-low",
+            data.low_reliability ??
+            data.low ??
+            0
+        );
+
+
+        // --------------------------------------------------
+        // RANKING
+        // --------------------------------------------------
+
+        const ranking =
+            data.ranking ||
+            data.equipment ||
+            data.reliability_ranking ||
+            [];
+
+        if (!Array.isArray(ranking) ||
+            ranking.length === 0) {
+
+            rankingContainer.innerHTML =
+                `<div class="info">
+                    No reliability data available.
+                </div>`;
+
+            return;
+        }
+
+
+        rankingContainer.innerHTML = `
+
+            <div class="table-container">
+
+                <table class="reliability-table">
+
+                    <thead>
+
+                        <tr>
+                            <th>Rank</th>
+                            <th>Equipment</th>
+                            <th>Reliability</th>
+                            <th>Status</th>
+                            <th>Repairs</th>
+                            <th>Maintenance</th>
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        ${ranking.map(
+                            (item, index) => {
+
+                                const score =
+                                    item.reliability_score ??
+                                    item.reliability ??
+                                    item.score ??
+                                    0;
+
+                                const status =
+                                    item.status ??
+                                    item.reliability_status ??
+                                    getReliabilityStatus(score);
+
+                                return `
+
+                                    <tr>
+
+                                        <td>
+                                            <strong>
+                                                ${index + 1}
+                                            </strong>
+                                        </td>
+
+                                        <td>
+                                            <strong>
+                                                ${escapeHtml(
+                                                    item.equipment_id ??
+                                                    item.id ??
+                                                    "Unknown"
+                                                )}
+                                            </strong>
+
+                                            ${
+                                                item.name
+                                                    ? `<br>
+                                                       <small>
+                                                       ${escapeHtml(item.name)}
+                                                       </small>`
+                                                    : ""
+                                            }
+
+                                        </td>
+
+                                        <td class="reliability-score">
+
+                                            ${formatNumber(score)}%
+
+                                        </td>
+
+                                        <td>
+
+                                            <span class="badge">
+                                                ${escapeHtml(status)}
+                                            </span>
+
+                                        </td>
+
+                                        <td>
+                                            ${item.total_repairs ??
+                                              item.repairs ??
+                                              0}
+                                        </td>
+
+                                        <td>
+                                            ${item.maintenance_records ??
+                                              item.maintenance_count ??
+                                              item.maintenance ??
+                                              0}
+                                        </td>
+
+                                    </tr>
+
+                                `;
+
+                            }
+                        ).join("")}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        `;
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Reliability analytics error:",
+            error
+        );
+
+        rankingContainer.innerHTML = `
+
+            <div class="error">
+
+                ❌ Unable to load reliability analytics.
+
+                <br>
+
+                ${escapeHtml(error.message)}
+
+            </div>
+
+        `;
+
+    }
+
+}
+
+// ==========================================================
+// EQUIPMENT RELIABILITY ANALYTICS — FuElectric-AI v3.5.3
+// CLEAN INTEGRATED FRONTEND MODULE
+// ==========================================================
+
+/*
+    v3.5.3 FRONTEND RESPONSIBILITIES
+
+    1. Load complete reliability analytics
+    2. Load reliability summary
+    3. Display reliability summary cards
+    4. Display equipment reliability ranking
+    5. Populate equipment reliability selector
+    6. Display selected equipment reliability
+    7. Handle API errors cleanly
+
+    BACKEND ENDPOINTS USED:
+
+        GET /reliability
+        GET /reliability/summary
+
+    IMPORTANT:
+    Do NOT add alternative/invented reliability endpoints here.
+*/
+
+
+// ==========================================================
+// RELIABILITY STATE
+// ==========================================================
+
+let reliabilityData = [];
+let reliabilitySummaryData = {};
+
+
+// ==========================================================
+// HELPER — GET RELIABILITY SCORE
+// ==========================================================
+
+function getReliabilityScore(item) {
+
+    return Number(
+        item.reliability_score ??
+        item.reliability ??
+        item.score ??
+        0
+    );
+
+}
+
+
+// ==========================================================
+// HELPER — RELIABILITY STATUS
+// ==========================================================
+
+function getReliabilityStatus(item) {
+
+    const score = getReliabilityScore(item);
+
+    return (
+        item.reliability_status ??
+        item.status ??
+        (
+            score >= 90
+                ? "Highly Reliable"
+                : score >= 75
+                    ? "Reliable"
+                    : score >= 50
+                        ? "Moderate"
+                        : "Low Reliability"
+        )
+    );
+
+}
+
+
+// ==========================================================
+// HELPER — STATUS CLASS
+// ==========================================================
+
+function getReliabilityClass(score) {
+
+    if (score >= 90) {
+        return "reliability-high";
+    }
+
+    if (score >= 75) {
+        return "reliability-high";
+    }
+
+    if (score >= 50) {
+        return "reliability-moderate";
+    }
+
+    return "reliability-low";
+
+}
+
+
+// ==========================================================
+// LOAD COMPLETE RELIABILITY ANALYTICS
+// ==========================================================
+
+async function loadReliabilityAnalytics() {
+
+    const rankingContainer =
+        document.getElementById("reliability-ranking-list");
+
+    if (rankingContainer) {
+
+        rankingContainer.innerHTML =
+            "<p class='loading'>Loading reliability analytics...</p>";
+
+    }
+
+
+    try {
+
+        // --------------------------------------------------
+        // LOAD COMPLETE RELIABILITY DATA
+        // --------------------------------------------------
+
+        const response =
+    await fetch(`${API_URL}/reliability`);
+
+if (!response.ok) {
+
+    throw new Error(
+        `Reliability request failed: ${response.status}`
+    );
+
+}
+
+const data =
+    await response.json();
+
+        console.log(
+            "v3.5.3 Reliability Analytics:",
+            data
+        );
+
+
+        // --------------------------------------------------
+        // NORMALIZE EQUIPMENT ARRAY
+        // --------------------------------------------------
+
+        reliabilityData =
+            Array.isArray(data)
+                ? data
+                : (
+                    data.equipment ??
+                    data.reliability ??
+                    data.data ??
+                    []
+                );
+
+
+        if (!Array.isArray(reliabilityData)) {
+
+            reliabilityData = [];
+
+        }
+
+
+        // --------------------------------------------------
+        // LOAD SUMMARY
+        // --------------------------------------------------
+
+        try {
+
+            const summaryResponse =
+    await fetch(`${API_URL}/reliability/summary`);
+
+if (!summaryResponse.ok) {
+
+    throw new Error(
+        `Reliability summary request failed: ${summaryResponse.status}`
+    );
+
+}
+
+reliabilitySummaryData =
+    await summaryResponse.json();
+
+            console.log(
+                "v3.5.3 Reliability Summary:",
+                reliabilitySummaryData
+            );
+
+        }
+
+        catch (summaryError) {
+
+            console.warn(
+                "Reliability summary could not be loaded:",
+                summaryError
+            );
+
+            reliabilitySummaryData = {};
+
+        }
+
+
+        // --------------------------------------------------
+        // RENDER SUMMARY
+        // --------------------------------------------------
+
+        renderReliabilitySummary(
+            reliabilitySummaryData,
+            reliabilityData
+        );
+
+
+        // --------------------------------------------------
+        // RENDER RANKING
+        // --------------------------------------------------
+
+        renderReliabilityRanking(
+            reliabilityData
+        );
+
+
+        // --------------------------------------------------
+        // POPULATE EQUIPMENT SELECTOR
+        // --------------------------------------------------
+
+        populateReliabilitySelector(
+            reliabilityData
+        );
+
+
+        // --------------------------------------------------
+        // SUCCESS
+        // --------------------------------------------------
+
+        if (reliabilityData.length === 0) {
+
+            if (rankingContainer) {
+
+                rankingContainer.innerHTML = `
+                    <div class="info">
+                        No reliability data is currently available.
+                    </div>
+                `;
+
+            }
+
+        }
+
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Reliability Analytics Error:",
+            error
+        );
+
+
+        if (rankingContainer) {
+
+            rankingContainer.innerHTML = `
+                <div class="error">
+                    ❌ Unable to load reliability analytics.
+                    <br>
+                    ${escapeHtml(error.message)}
+                </div>
+            `;
+
+        }
+
+
+        showMessage(
+            "Could not load Equipment Reliability Analytics: " +
+            error.message
+        );
+
+    }
+
+}
+
+
+// ==========================================================
+// RENDER RELIABILITY SUMMARY
+// ==========================================================
+
+function renderReliabilitySummary(
+    summary,
+    equipment
+) {
+
+    summary = summary || {};
+    equipment = Array.isArray(equipment)
+        ? equipment
+        : [];
+
+
+    // ------------------------------------------------------
+    // TOTAL EQUIPMENT
+    // ------------------------------------------------------
+
+    const totalEquipment =
+        summary.total_equipment ??
+        summary.total ??
+        equipment.length;
+
+
+    // ------------------------------------------------------
+    // AVERAGE RELIABILITY
+    // ------------------------------------------------------
+
+    let averageScore =
+        summary.average_reliability ??
+        summary.average_reliability_score ??
+        summary.average_score;
+
+
+    // If backend summary doesn't provide it,
+    // calculate from equipment data.
+
+    if (
+        averageScore === undefined ||
+        averageScore === null
+    ) {
+
+        if (equipment.length > 0) {
+
+            const totalScore =
+                equipment.reduce(
+                    (sum, item) =>
+                        sum + getReliabilityScore(item),
+                    0
+                );
+
+            averageScore =
+                totalScore / equipment.length;
+
+        }
+
+        else {
+
+            averageScore = 0;
+
+        }
+
+    }
+
+
+    // ------------------------------------------------------
+    // CATEGORY COUNTS
+    // ------------------------------------------------------
+
+    let highlyReliable =
+        summary.highly_reliable ??
+        summary.high_reliability ??
+        summary.highly_reliable_count;
+
+    let reliable =
+        summary.reliable ??
+        summary.reliable_count;
+
+    let moderate =
+        summary.moderate ??
+        summary.moderate_count;
+
+    let low =
+        summary.low_reliability ??
+        summary.low ??
+        summary.low_reliability_count;
+
+
+    // ------------------------------------------------------
+    // FALLBACK CATEGORY CALCULATION
+    // ------------------------------------------------------
+
+    if (
+        highlyReliable === undefined ||
+        reliable === undefined ||
+        moderate === undefined ||
+        low === undefined
+    ) {
+
+        highlyReliable = 0;
+        reliable = 0;
+        moderate = 0;
+        low = 0;
+
+
+        equipment.forEach(item => {
+
+            const score =
+                getReliabilityScore(item);
+
+            if (score >= 90) {
+
+                highlyReliable++;
+
+            }
+
+            else if (score >= 75) {
+
+                reliable++;
+
+            }
+
+            else if (score >= 50) {
+
+                moderate++;
+
+            }
+
+            else {
+
+                low++;
+
+            }
+
+        });
+
+    }
+
+
+    // ------------------------------------------------------
+    // UPDATE HTML
+    // ------------------------------------------------------
+
+    const values = {
+
+        "reliability-total-equipment":
+            totalEquipment,
+
+        "reliability-average-score":
+            `${Number(averageScore).toFixed(1)}%`,
+
+        "reliability-highly-reliable":
+            highlyReliable,
+
+        "reliability-reliable":
+            reliable,
+
+        "reliability-moderate":
+            moderate,
+
+        "reliability-low":
+            low
+
+    };
+
+
+    Object.entries(values).forEach(
+        ([id, value]) => {
+
+            const element =
+                document.getElementById(id);
+
+            if (element) {
+
+                element.textContent = value;
+
+            }
+
+        }
+    );
+
+}
+
+
+// ==========================================================
+// RENDER RELIABILITY RANKING
+// ==========================================================
+
+function renderReliabilityRanking(
+    equipment
+) {
+
+    const container =
+        document.getElementById(
+            "reliability-ranking-list"
+        );
+
+
+    if (!container) return;
+
+
+    if (
+        !Array.isArray(equipment) ||
+        equipment.length === 0
+    ) {
+
+        container.innerHTML = `
+            <div class="info">
+                No reliability ranking data available.
+            </div>
+        `;
+
+        return;
+
+    }
+
+
+    // ------------------------------------------------------
+    // SORT BY RELIABILITY SCORE
+    // HIGHEST → LOWEST
+    // ------------------------------------------------------
+
+    const ranked =
+        [...equipment].sort(
+            (a, b) =>
+                getReliabilityScore(b) -
+                getReliabilityScore(a)
+        );
+
+
+    // ------------------------------------------------------
+    // TABLE
+    // ------------------------------------------------------
+
+    container.innerHTML = `
+
+        <div class="table-container">
+
+            <table class="reliability-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th>Rank</th>
+
+                        <th>Equipment</th>
+
+                        <th>Reliability Score</th>
+
+                        <th>Status</th>
+
+                        <th>MTBF</th>
+
+                        <th>MTTR</th>
+
+                        <th>Failure Frequency</th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                    ${ranked.map(
+                        (item, index) => {
+
+                            const score =
+                                getReliabilityScore(item);
+
+                            const status =
+                                getReliabilityStatus(item);
+
+                            const equipmentId =
+                                item.equipment_id ??
+                                item.id ??
+                                "N/A";
+
+                            const equipmentName =
+                                item.name ??
+                                item.equipment_name ??
+                                equipmentId;
+
+                            const mtbf =
+                                item.mtbf ??
+                                item.mtbf_hours ??
+                                "N/A";
+
+                            const mttr =
+                                item.mttr ??
+                                item.mttr_hours ??
+                                "N/A";
+
+                            const failureFrequency =
+                                item.failure_frequency ??
+                                item.failure_rate ??
+                                item.failures ??
+                                "N/A";
+
+
+                            return `
+
+                                <tr>
+
+                                    <td>
+                                        <strong>
+                                            #${index + 1}
+                                        </strong>
+                                    </td>
+
+
+                                    <td>
+
+                                        <strong>
+                                            ${escapeHtml(
+                                                equipmentName
+                                            )}
+                                        </strong>
+
+                                        <br>
+
+                                        <small>
+                                            ${escapeHtml(
+                                                equipmentId
+                                            )}
+                                        </small>
+
+                                    </td>
+
+
+                                    <td>
+
+                                        <span
+                                            class="reliability-score
+                                            ${getReliabilityClass(score)}"
+                                        >
+
+                                            ${score.toFixed(1)}%
+
+                                        </span>
+
+                                    </td>
+
+
+                                    <td>
+
+                                        <span
+                                            class="${getReliabilityClass(score)}"
+                                        >
+
+                                            ${escapeHtml(
+                                                status
+                                            )}
+
+                                        </span>
+
+                                    </td>
+
+
+                                    <td>
+                                        ${escapeHtml(mtbf)}
+                                    </td>
+
+
+                                    <td>
+                                        ${escapeHtml(mttr)}
+                                    </td>
+
+
+                                    <td>
+                                        ${escapeHtml(
+                                            failureFrequency
+                                        )}
+                                    </td>
+
+                                </tr>
+
+                            `;
+
+                        }
+                    ).join("")}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    `;
+
+}
+
+
+// ==========================================================
+// POPULATE RELIABILITY EQUIPMENT SELECTOR
+// ==========================================================
+
+function populateReliabilitySelector(
+    equipment
+) {
+
+    const select =
+        document.getElementById(
+            "reliability-equipment-select"
+        );
+
+
+    if (!select) return;
+
+
+    const currentValue =
+        select.value;
+
+
+    select.innerHTML = `
+        <option value="">
+            Select Equipment
+        </option>
+    `;
+
+
+    if (!Array.isArray(equipment)) {
+        return;
+    }
+
+
+    equipment.forEach(item => {
+
+        const equipmentId =
+            item.equipment_id ??
+            item.id;
+
+
+        if (!equipmentId) {
+            return;
+        }
+
+
+        const equipmentName =
+            item.name ??
+            item.equipment_name ??
+            equipmentId;
+
+
+        const option =
+            document.createElement("option");
+
+
+        option.value =
+            equipmentId;
+
+
+        option.textContent =
+            `${equipmentName} (${equipmentId})`;
+
+
+        select.appendChild(option);
+
+    });
+
+
+    // Restore previous selection if it still exists.
+
+    if (
+        currentValue &&
+        [...select.options].some(
+            option =>
+                option.value === currentValue
+        )
+    ) {
+
+        select.value =
+            currentValue;
+
+    }
+
+}
+
+
+// ==========================================================
+// LOAD SELECTED EQUIPMENT RELIABILITY
+// ==========================================================
+
+async function loadSelectedReliability() {
+
+    const select =
+        document.getElementById(
+            "reliability-equipment-select"
+        );
+
+    const result =
+        document.getElementById(
+            "reliability-detail-result"
+        );
+
+
+    if (!select || !result) {
+        return;
+    }
+
+
+    const equipmentId =
+        select.value;
+
+
+    if (!equipmentId) {
+
+        result.innerHTML = `
+            <p>
+                Select equipment to view reliability.
+            </p>
+        `;
+
+        return;
+
+    }
+
+
+    // ------------------------------------------------------
+    // FIND EQUIPMENT FROM ALREADY-LOADED DATA
+    // ------------------------------------------------------
+
+    const item =
+        reliabilityData.find(
+            equipment =>
+                String(
+                    equipment.equipment_id ??
+                    equipment.id
+                ) === String(equipmentId)
+        );
+
+
+    if (!item) {
+
+        result.innerHTML = `
+            <div class="error">
+                Reliability data for
+                ${escapeHtml(equipmentId)}
+                was not found.
+                <br>
+                Refresh Reliability and try again.
+            </div>
+        `;
+
+        return;
+
+    }
+
+
+    renderSelectedReliability(
+        item,
+        result
+    );
+
+}
+
+
+// ==========================================================
+// RENDER SELECTED EQUIPMENT RELIABILITY
+// ==========================================================
+
+function renderSelectedReliability(
+    item,
+    container
+) {
+
+    const score =
+        getReliabilityScore(item);
+
+    const status =
+        getReliabilityStatus(item);
+
+    const equipmentId =
+        item.equipment_id ??
+        item.id ??
+        "N/A";
+
+    const equipmentName =
+        item.name ??
+        item.equipment_name ??
+        equipmentId;
+
+    const mtbf =
+        item.mtbf ??
+        item.mtbf_hours ??
+        "N/A";
+
+    const mttr =
+        item.mttr ??
+        item.mttr_hours ??
+        "N/A";
+
+    const failureFrequency =
+        item.failure_frequency ??
+        item.failure_rate ??
+        item.failures ??
+        "N/A";
+
+    const repairCount =
+        item.repair_count ??
+        item.repairs ??
+        0;
+
+    const maintenanceCount =
+        item.maintenance_count ??
+        item.maintenance_records ??
+        item.maintenance ??
+        0;
+
+    const recommendation =
+        item.recommendation ??
+        item.reliability_recommendation ??
+        "No recommendation available.";
+
+
+    container.innerHTML = `
+
+        <div class="reliability-detail-grid">
+
+            <div class="reliability-detail-card">
+
+                <h4>
+                    Equipment
+                </h4>
+
+                <p>
+                    ${escapeHtml(
+                        equipmentName
+                    )}
+                </p>
+
+                <small>
+                    ${escapeHtml(
+                        equipmentId
+                    )}
+                </small>
+
+            </div>
+
+
+            <div class="reliability-detail-card">
+
+                <h4>
+                    Reliability Score
+                </h4>
+
+                <p
+                    class="${getReliabilityClass(score)}"
+                >
+                    ${score.toFixed(1)}%
+                </p>
+
+            </div>
+
+
+            <div class="reliability-detail-card">
+
+                <h4>
+                    Reliability Status
+                </h4>
+
+                <p>
+                    ${escapeHtml(status)}
+                </p>
+
+            </div>
+
+
+            <div class="reliability-detail-card">
+
+                <h4>
+                    MTBF
+                </h4>
+
+                <p>
+                    ${escapeHtml(mtbf)}
+                </p>
+
+            </div>
+
+
+            <div class="reliability-detail-card">
+
+                <h4>
+                    MTTR
+                </h4>
+
+                <p>
+                    ${escapeHtml(mttr)}
+                </p>
+
+            </div>
+
+
+            <div class="reliability-detail-card">
+
+                <h4>
+                    Failure Frequency
+                </h4>
+
+                <p>
+                    ${escapeHtml(
+                        failureFrequency
+                    )}
+                </p>
+
+            </div>
+
+
+            <div class="reliability-detail-card">
+
+                <h4>
+                    Repair Count
+                </h4>
+
+                <p>
+                    ${escapeHtml(
+                        repairCount
+                    )}
+                </p>
+
+            </div>
+
+
+            <div class="reliability-detail-card">
+
+                <h4>
+                    Maintenance Count
+                </h4>
+
+                <p>
+                    ${escapeHtml(
+                        maintenanceCount
+                    )}
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="info">
+
+            <strong>
+                🤖 FuElectric-AI Recommendation
+            </strong>
+
+            <p>
+                ${escapeHtml(
+                    recommendation
+                )}
+            </p>
+
+        </div>
+
+    `;
+
+}
+
+
+// ==========================================================
+// RELIABILITY SELECTOR CHANGE
+// ==========================================================
+
+function handleReliabilityEquipmentChange() {
+
+    const select =
+        document.getElementById(
+            "reliability-equipment-select"
+        );
+
+    const result =
+        document.getElementById(
+            "reliability-detail-result"
+        );
+
+
+    if (!select || !result) {
+        return;
+    }
+
+
+    if (!select.value) {
+
+        result.innerHTML = `
+            <p>
+                Select equipment to view reliability.
+            </p>
+        `;
+
+        return;
+
+    }
+
+
+    loadSelectedReliability();
+
+}
+
+
+// ==========================================================
+// INITIALIZE RELIABILITY MODULE
+// ==========================================================
+
+function initializeReliabilityAnalytics() {
+
+    const select =
+        document.getElementById(
+            "reliability-equipment-select"
+        );
+
+
+    if (select) {
+
+        // Prevent duplicate listeners.
+
+        select.removeEventListener(
+            "change",
+            handleReliabilityEquipmentChange
+        );
+
+        select.addEventListener(
+            "change",
+            handleReliabilityEquipmentChange
+        );
+
+    }
+
+}
+
+// ==========================================================
+// v3.5.4 — HEALTH & RISK INTELLIGENCE
+// ==========================================================
+
+async function refreshHealthRiskIntelligence() {
+
+    console.log(
+        "Refreshing Health & Risk Intelligence..."
+    );
+
+    await Promise.allSettled([
+
+        loadHealthRiskSummary(),
+
+        loadEquipmentRiskRanking(),
+
+        loadDeterioratingEquipment(),
+
+        loadHealthTrendEquipmentSelector()
+
+    ]);
+
+}
+
+
+// ==========================================================
+// v3.5.4 — HEALTH & RISK SUMMARY
+// ==========================================================
+
+async function loadHealthRiskSummary() {
+
+    const container =
+        document.getElementById(
+            "health-risk-summary"
+        );
+
+    if (!container) {
+        return;
+    }
+
+    try {
+
+        const response =
+            await fetch(
+                `${API_URL}/health-risk-summary`
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                `Health risk summary failed: ${response.status}`
+            );
+        }
+
+        const data =
+            await response.json();
+
+        container.innerHTML = `
+
+            <div class="dashboard">
+
+                <div class="card">
+
+                    <h3>Total Equipment</h3>
+
+                    <p>
+                        ${data.total_equipment ?? 0}
+                    </p>
+
+                </div>
+
+                <div class="card">
+
+                    <h3>Average Health</h3>
+
+                    <p>
+                        ${
+                            data.average_health !== undefined
+                            ? `${formatNumber(data.average_health)}%`
+                            : "--"
+                        }
+                    </p>
+
+                </div>
+
+                <div class="card">
+
+                    <h3>Average Risk</h3>
+
+                    <p>
+                        ${
+                            data.average_risk !== undefined
+                            ? `${formatNumber(data.average_risk)}%`
+                            : "--"
+                        }
+                    </p>
+
+                </div>
+
+                <div class="card">
+
+                    <h3>Low Risk</h3>
+
+                    <p>
+                        ${data.low_risk ?? 0}
+                    </p>
+
+                </div>
+
+                <div class="card">
+
+                    <h3>Medium Risk</h3>
+
+                    <p>
+                        ${data.medium_risk ?? 0}
+                    </p>
+
+                </div>
+
+                <div class="card">
+
+                    <h3>High Risk</h3>
+
+                    <p>
+                        ${data.high_risk ?? 0}
+                    </p>
+
+                </div>
+
+            </div>
+
+        `;
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Health risk summary error:",
+            error
+        );
+
+        container.innerHTML = `
+
+            <div class="error">
+
+                ❌ Health & Risk Summary unavailable.
+
+                <br>
+
+                ${escapeHtml(error.message)}
+
+            </div>
+
+        `;
+
+    }
+
+}
+
+
+// ==========================================================
+// v3.5.4 — RISK RANKING
+// ==========================================================
+
+async function loadEquipmentRiskRanking() {
+
+    const containers = [
+
+        document.getElementById(
+            "equipment-risk-ranking"
+        ),
+
+        document.getElementById(
+            "risk-ranking-list"
+        )
+
+    ].filter(Boolean);
+
+    if (!containers.length) {
+        return;
+    }
+
+    try {
+
+        const response =
+            await fetch(
+                `${API_URL}/health-risk-ranking`
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                `Risk ranking failed: ${response.status}`
+            );
+        }
+
+        const data =
+            await response.json();
+
+        const ranking =
+            data.ranking ||
+            data.equipment ||
+            data.results ||
+            [];
+
+        let html = "";
+
+        if (!ranking.length) {
+
+            html =
+                `<div class="info">
+                    No equipment risk data available.
+                </div>`;
+
+        }
+        else {
+
+            html = `
+
+                <div class="table-container">
+
+                    <table>
+
+                        <thead>
+
+                            <tr>
+
+                                <th>Rank</th>
+                                <th>Equipment</th>
+                                <th>Health</th>
+                                <th>Risk</th>
+                                <th>Status</th>
+
+                            </tr>
+
+                        </thead>
+
+                        <tbody>
+
+                            ${ranking.map(
+                                (item, index) => {
+
+                                    return `
+
+                                        <tr>
+
+                                            <td>
+                                                ${index + 1}
+                                            </td>
+
+                                            <td>
+                                                <strong>
+                                                    ${escapeHtml(
+                                                        item.equipment_id ??
+                                                        item.id ??
+                                                        "Unknown"
+                                                    )}
+                                                </strong>
+                                            </td>
+
+                                            <td>
+                                                ${
+                                                    item.health_score !== undefined
+                                                    ? `${formatNumber(item.health_score)}%`
+                                                    : "--"
+                                                }
+                                            </td>
+
+                                            <td>
+                                                ${
+                                                    item.risk_score !== undefined
+                                                    ? `${formatNumber(item.risk_score)}%`
+                                                    : "--"
+                                                }
+                                            </td>
+
+                                            <td>
+                                                <span class="badge">
+                                                    ${escapeHtml(
+                                                        item.risk_level ??
+                                                        item.status ??
+                                                        "Unknown"
+                                                    )}
+                                                </span>
+                                            </td>
+
+                                        </tr>
+
+                                    `;
+
+                                }
+                            ).join("")}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            `;
+
+        }
+
+        containers.forEach(
+            container => {
+                container.innerHTML = html;
+            }
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Risk ranking error:",
+            error
+        );
+
+        containers.forEach(
+            container => {
+
+                container.innerHTML = `
+
+                    <div class="error">
+
+                        ❌ Unable to load equipment risk ranking.
+
+                        <br>
+
+                        ${escapeHtml(error.message)}
+
+                    </div>
+
+                `;
+
+            }
+        );
+
+    }
+
+}
+
+
+// ==========================================================
+// v3.5.4 — DETERIORATING EQUIPMENT
+// ==========================================================
+
+async function loadDeterioratingEquipment() {
+
+    const containers = [
+
+        document.getElementById(
+            "deteriorating-equipment"
+        ),
+
+        document.getElementById(
+            "deteriorating-equipment-list"
+        )
+
+    ].filter(Boolean);
+
+    if (!containers.length) {
+        return;
+    }
+
+    try {
+
+        const response =
+            await fetch(
+                `${API_URL}/health-risk-deteriorating`
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                `Deteriorating equipment request failed: ${response.status}`
+            );
+        }
+
+        const data =
+            await response.json();
+
+        const equipment =
+            data.equipment ||
+            data.results ||
+            data.deteriorating ||
+            [];
+
+        if (!equipment.length) {
+
+            containers.forEach(
+                container => {
+
+                    container.innerHTML =
+                        `<div class="success">
+                            ✅ No deteriorating equipment detected.
+                        </div>`;
+
+                }
+            );
+
+            return;
+        }
+
+        const html = equipment.map(
+            item => `
+
+                <div class="maintenance-alert-card">
+
+                    <h4>
+                        ⚠️ ${escapeHtml(
+                            item.equipment_id ??
+                            item.id ??
+                            "Unknown Equipment"
+                        )}
+                    </h4>
+
+                    ${
+                        item.name
+                        ? `<p>
+                            <strong>Name:</strong>
+                            ${escapeHtml(item.name)}
+                           </p>`
+                        : ""
+                    }
+
+                    ${
+                        item.health_score !== undefined
+                        ? `<p>
+                            <strong>Health:</strong>
+                            ${formatNumber(item.health_score)}%
+                           </p>`
+                        : ""
+                    }
+
+                    ${
+                        item.risk_score !== undefined
+                        ? `<p>
+                            <strong>Risk:</strong>
+                            ${formatNumber(item.risk_score)}%
+                           </p>`
+                        : ""
+                    }
+
+                    ${
+                        item.trend
+                        ? `<p>
+                            <strong>Trend:</strong>
+                            ${escapeHtml(item.trend)}
+                           </p>`
+                        : ""
+                    }
+
+                </div>
+
+            `
+        ).join("");
+
+        containers.forEach(
+            container => {
+                container.innerHTML = html;
+            }
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Deteriorating equipment error:",
+            error
+        );
+
+        containers.forEach(
+            container => {
+
+                container.innerHTML = `
+
+                    <div class="error">
+
+                        ❌ Unable to load deteriorating equipment.
+
+                        <br>
+
+                        ${escapeHtml(error.message)}
+
+                    </div>
+
+                `;
+
+            }
+        );
+
+    }
+
+}
+
+
+// ==========================================================
+// v3.5.4 — HEALTH TREND EQUIPMENT SELECTOR
+// ==========================================================
+
+async function loadHealthTrendEquipmentSelector() {
+
+    const selectors = [
+
+        document.getElementById(
+            "health-trend-equipment-select"
+        ),
+
+        document.getElementById(
+            "health-trend-equipment"
+        )
+
+    ].filter(Boolean);
+
+    if (!selectors.length) {
+        return;
+    }
+
+    try {
+
+        const response =
+            await fetch(
+                `${API_URL}/equipment`
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                `Equipment request failed: ${response.status}`
+            );
+        }
+
+        const equipment =
+            await response.json();
+
+        selectors.forEach(
+            selector => {
+
+                selector.innerHTML = `
+                    <option value="">
+                        Select Equipment
+                    </option>
+                `;
+
+                equipment.forEach(item => {
+
+                    const option =
+                        document.createElement(
+                            "option"
+                        );
+
+                    option.value =
+                        item.equipment_id;
+
+                    option.textContent =
+                        `${item.equipment_id} — ${item.name}`;
+
+                    selector.appendChild(option);
+
+                });
+
+            }
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Health trend selector error:",
+            error
+        );
+
+    }
+
+}
+
+
+// ==========================================================
+// v3.5.4 — EQUIPMENT HEALTH TREND
+// ==========================================================
+
+async function loadEquipmentTrend() {
+
+    const selector =
+        document.getElementById(
+            "health-trend-equipment"
+        );
+
+    const result =
+        document.getElementById(
+            "health-trend-result"
+        );
+
+    if (!selector || !result) {
+        return;
+    }
+
+    const equipmentId =
+        selector.value;
+
+    if (!equipmentId) {
+
+        result.innerHTML =
+            `<p>Select equipment.</p>`;
+
+        return;
+
+    }
+
+    result.innerHTML =
+        `<div class="info">
+            Loading health trend...
+        </div>`;
+
+    try {
+
+        const response =
+            await fetch(
+                `${API_URL}/equipment/${encodeURIComponent(
+                    equipmentId
+                )}/health-trend`
+            );
+
+        if (!response.ok) {
+
+            throw new Error(
+                `Health trend request failed: ${response.status}`
+            );
+
+        }
+
+        const data =
+            await response.json();
+
+        console.log(
+            "Equipment Health Trend:",
+            data
+        );
+
+        const trend =
+            data.trend ||
+            data.history ||
+            data.data ||
+            [];
+
+        if (!Array.isArray(trend) ||
+            trend.length === 0) {
+
+            result.innerHTML =
+                `<div class="info">
+                    No health trend data available for this equipment.
+                </div>`;
+
+            return;
+
+        }
+
+        result.innerHTML = `
+
+            <div class="table-container">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+                            <th>Date</th>
+                            <th>Health Score</th>
+                            <th>Status</th>
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        ${trend.map(
+                            item => `
+
+                                <tr>
+
+                                    <td>
+                                        ${escapeHtml(
+                                            item.date ??
+                                            item.timestamp ??
+                                            item.recorded_at ??
+                                            "--"
+                                        )}
+                                    </td>
+
+                                    <td>
+                                        ${
+                                            item.health_score !== undefined
+                                            ? `${formatNumber(item.health_score)}%`
+                                            : "--"
+                                        }
+                                    </td>
+
+                                    <td>
+                                        ${escapeHtml(
+                                            item.status ??
+                                            getHealthStatus(
+                                                item.health_score
+                                            )
+                                        )}
+                                    </td>
+
+                                </tr>
+
+                            `
+                        ).join("")}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        `;
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Health trend error:",
+            error
+        );
+
+        result.innerHTML = `
+
+            <div class="error">
+
+                ❌ Unable to load equipment health trend.
+
+                <br>
+
+                ${escapeHtml(error.message)}
+
+            </div>
+
+        `;
+
+    }
+
+}
+
+// ==========================================================
+// HELPERS
+// ==========================================================
+
+function setElementText(
+    id,
+    value
+) {
+
+    const element =
+        document.getElementById(id);
+
+    if (element) {
+        element.textContent = value;
+    }
+
+}
+
+
+function formatNumber(
+    value
+) {
+
+    const number =
+        Number(value);
+
+    return Number.isFinite(number)
+        ? number.toFixed(1)
+        : "0.0";
+
+}
+
+
+function getReliabilityStatus(
+    score
+) {
+
+    const value =
+        Number(score);
+
+    if (value >= 90) {
+        return "Highly Reliable";
+    }
+
+    if (value >= 75) {
+        return "Reliable";
+    }
+
+    if (value >= 50) {
+        return "Moderate";
+    }
+
+    return "Low Reliability";
+
+}
+
+
+function getHealthStatus(
+    score
+) {
+
+    const value =
+        Number(score);
+
+    if (value >= 90) {
+        return "Excellent";
+    }
+
+    if (value >= 75) {
+        return "Good";
+    }
+
+    if (value >= 50) {
+        return "Fair";
+    }
+
+    return "Poor";
+
+}
+
+// ==========================================================
+// START INTELLIGENCE LAYER
+// ==========================================================
+
+document.addEventListener(
+    "DOMContentLoaded",
+    () => {
+
+        initializeReliabilityAndRiskIntelligence();
+
+    }
+);
+
+// ==========================================================
+// v3.5.3 + v3.5.4 INITIALIZATION
+// ==========================================================
+
+async function initializeReliabilityAndRiskIntelligence() {
+
+    console.log(
+        "FuElectric-AI v3.5.3/v3.5.4 Intelligence initializing..."
+    );
+
+    await Promise.allSettled([
+
+        loadReliabilityAnalytics(),
+
+        refreshHealthRiskIntelligence()
+
+    ]);
+
+    initializeReliabilityAnalytics();
+
+    console.log(
+        "FuElectric-AI v3.5.3/v3.5.4 Intelligence ready."
+    );
+
+}

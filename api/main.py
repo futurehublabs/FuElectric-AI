@@ -83,6 +83,11 @@ from database.database import (
     get_reliability_summary,
     get_reliability_ranking,
 
+    get_equipment_health_trend,
+    get_equipment_risk_ranking,
+    get_health_risk_summary,
+    get_deteriorating_equipment
+
 )
 
 
@@ -100,6 +105,65 @@ class WorkOrderStatusUpdate(BaseModel):
 
 create_tables()
 
+# ==========================================================
+# DATABASE MIGRATIONS
+# ==========================================================
+
+def migrate_database():
+    """
+    Apply safe database schema upgrades.
+
+    FuElectric-AI v3.5.3
+    """
+
+    conn = get_connection()
+
+    try:
+
+        # --------------------------------------------------
+        # CHECK EXISTING REPAIR COLUMNS
+        # --------------------------------------------------
+
+        columns = conn.execute("""
+            PRAGMA table_info(repairs)
+        """).fetchall()
+
+        existing_columns = {
+            row["name"]
+            for row in columns
+        }
+
+        # --------------------------------------------------
+        # ADD REPAIR START DATE
+        # --------------------------------------------------
+
+        if "repair_start_date" not in existing_columns:
+
+            conn.execute("""
+                ALTER TABLE repairs
+                ADD COLUMN repair_start_date TEXT
+            """)
+
+        # --------------------------------------------------
+        # ADD REPAIR COMPLETION DATE
+        # --------------------------------------------------
+
+        if "repair_completion_date" not in existing_columns:
+
+            conn.execute("""
+                ALTER TABLE repairs
+                ADD COLUMN repair_completion_date TEXT
+            """)
+
+        conn.commit()
+
+    finally:
+
+        conn.close()
+
+
+    # Apply database migrations after base tables exist
+    migrate_database()
 
 # ==========================================================
 # APPLICATION
@@ -354,6 +418,37 @@ def maintenance_history(
 
     return history
 
+# ==========================================================
+# HEALTH & RISK INTELLIGENCE — v3.5.4
+# ==========================================================
+
+@app.get("/health-risk-summary")
+def health_risk_summary():
+    return get_health_risk_summary()
+
+
+@app.get("/health-risk-ranking")
+def health_risk_ranking():
+    return get_equipment_risk_ranking()
+
+
+@app.get("/health-risk-deteriorating")
+def health_risk_deteriorating():
+    return get_deteriorating_equipment()
+
+
+@app.get("/health-risk-trend/{equipment_id}")
+def health_risk_trend(equipment_id: str):
+
+    equipment = get_equipment_by_id(equipment_id)
+
+    if equipment is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Equipment not found."
+        )
+
+    return get_equipment_health_trend(equipment_id)
 
 # ==========================================================
 # TECHNICIANS
@@ -977,6 +1072,180 @@ def reliability_summary():
             get_reliability_summary()
     }
 
+# ==========================================================
+# RELIABILITY ALERTS — FuElectric-AI v3.5.3
+# ==========================================================
+
+def get_reliability_alerts():
+    """Return equipment that requires a reliability alert."""
+    return get_deteriorating_equipment()
+
+
+@app.get("/reliability/alerts")
+def reliability_alerts():
+
+    return get_reliability_alerts()
+
+# ==========================================================
+# RELIABILITY RANKING
+# ==========================================================
+
+@app.get("/reliability/ranking")
+def reliability_ranking():
+
+    return {
+        "message":
+            "Equipment reliability ranking generated successfully.",
+
+        "ranking":
+            get_reliability_ranking()
+    }
+
+# ==========================================================
+# SINGLE EQUIPMENT RELIABILITY
+# FuElectric-AI v3.5.3
+# ==========================================================
+
+@app.get("/equipment/{equipment_id}/reliability")
+def equipment_reliability(
+    equipment_id: str
+):
+
+    reliability = get_equipment_reliability(
+        equipment_id
+    )
+
+    if reliability is None:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Equipment not found."
+        )
+
+    return {
+        "message":
+            "Equipment reliability analytics generated successfully.",
+
+        **reliability
+    }
+
+# ==========================================================
+# EQUIPMENT RELIABILITY ANALYTICS — FuElectric-AI v3.5.3
+# ==========================================================
+
+@app.get("/reliability")
+def reliability_analytics():
+
+    return {
+        "message":
+            "Equipment reliability analytics generated successfully.",
+
+        "equipment":
+            get_all_equipment_reliability()
+    }
+
+
+# ==========================================================
+# RELIABILITY ANALYTICS DASHBOARD
+# FuElectric-AI v3.5.3
+# ==========================================================
+
+@app.get("/reliability/analytics")
+def reliability_analytics_dashboard():
+
+    summary = get_reliability_summary()
+
+    return {
+        "message":
+            "Reliability analytics generated successfully.",
+
+        "total_equipment":
+            summary.get("total_equipment", 0),
+
+        "average_reliability":
+            summary.get(
+                "average_reliability_score",
+                0
+            ),
+
+        "highly_reliable":
+            summary.get("highly_reliable", 0),
+
+        "reliable":
+            summary.get("reliable", 0),
+
+        "moderate":
+            summary.get("moderate", 0),
+
+        "low_reliability":
+            summary.get("low_reliability", 0),
+
+        "average_mtbf_days":
+            summary.get("average_mtbf_days"),
+
+        "average_mttr_days":
+            summary.get("average_mttr_days"),
+
+        "equipment_with_recent_failures":
+            summary.get(
+                "equipment_with_recent_failures",
+                0
+            ),
+
+        "equipment_with_high_failure_frequency":
+            summary.get(
+                "equipment_with_high_failure_frequency",
+                0
+            ),
+
+        "equipment_with_pending_repairs":
+            summary.get(
+                "equipment_with_pending_repairs",
+                0
+            ),
+
+        "most_reliable_equipment":
+            summary.get("most_reliable_equipment"),
+
+        "least_reliable_equipment":
+            summary.get("least_reliable_equipment"),
+
+        "ranking":
+            get_reliability_ranking()
+    }
+
+# ==========================================================
+# RELIABILITY SUMMARY
+# ==========================================================
+
+@app.get("/reliability/summary")
+def reliability_summary():
+
+    return {
+        "message":
+            "Reliability summary generated successfully.",
+
+        "summary":
+            get_reliability_summary()
+    }
+
+
+# ==========================================================
+# RELIABILITY ALERTS
+# ==========================================================
+
+def get_reliability_alerts():
+
+    """Return equipment that requires a reliability alert."""
+
+    return get_deteriorating_equipment()
+
+
+@app.get("/reliability/alerts")
+def reliability_alerts():
+
+    return get_reliability_alerts()
+
 
 # ==========================================================
 # RELIABILITY RANKING
@@ -998,7 +1267,7 @@ def reliability_ranking():
 # SINGLE EQUIPMENT RELIABILITY
 # ==========================================================
 
-@app.get("/reliability/{equipment_id}")
+@app.get("/equipment/{equipment_id}/reliability")
 def equipment_reliability(
     equipment_id: str
 ):
@@ -1018,6 +1287,5 @@ def equipment_reliability(
         "message":
             "Equipment reliability analytics generated successfully.",
 
-        "reliability":
-            reliability
+        **reliability
     }
