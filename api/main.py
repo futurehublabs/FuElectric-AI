@@ -162,8 +162,8 @@ def migrate_database():
         conn.close()
 
 
-    # Apply database migrations after base tables exist
-    migrate_database()
+# Apply database migrations after base tables exist
+migrate_database()
 
 # ==========================================================
 # APPLICATION
@@ -1042,6 +1042,726 @@ def technician_workload_intelligence():
     }
 
 # ==========================================================
+# INTELLIGENT SCANNER PROFILE
+# FuElectric-AI v3.5.6
+# ==========================================================
+
+@app.get("/scanner/profile/{equipment_id}")
+def intelligent_scanner_profile(
+    equipment_id: str
+):
+    """
+    FuElectric-AI v3.5.6
+
+    Intelligent Equipment Scanner Profile.
+
+    Converts an equipment ID scan into a complete
+    operational equipment intelligence profile.
+
+    Returns:
+    - Equipment identity
+    - Health
+    - Risk
+    - Reliability
+    - Maintenance status
+    - Recent maintenance
+    - Repair history
+    - Work orders
+    - Risk factors
+    - Recommended action
+    - Scanner confidence
+    """
+
+    # ------------------------------------------------------
+    # NORMALIZE EQUIPMENT ID
+    # ------------------------------------------------------
+
+    equipment_id = equipment_id.strip()
+
+    if not equipment_id:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Equipment ID is required."
+        )
+
+    # ------------------------------------------------------
+    # FIND EQUIPMENT
+    # ------------------------------------------------------
+
+    equipment = get_equipment_by_id(
+        equipment_id
+    )
+
+    if equipment is None:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Equipment not found."
+        )
+
+    # ------------------------------------------------------
+    # EQUIPMENT DATA
+    # ------------------------------------------------------
+
+    if hasattr(equipment, "model_dump"):
+
+        equipment_data = equipment.model_dump()
+
+    elif hasattr(equipment, "dict"):
+
+        equipment_data = equipment.dict()
+
+    else:
+
+        equipment_data = dict(equipment)
+
+    # ------------------------------------------------------
+    # HEALTH
+    # ------------------------------------------------------
+
+    health_data = get_equipment_health(
+        equipment_id
+    )
+
+    if health_data is None:
+
+        health_data = {}
+
+    # ------------------------------------------------------
+    # RELIABILITY
+    # ------------------------------------------------------
+
+    reliability_data = get_equipment_reliability(
+        equipment_id
+    )
+
+    if reliability_data is None:
+
+        reliability_data = {}
+
+    # ------------------------------------------------------
+    # MAINTENANCE HISTORY
+    # ------------------------------------------------------
+
+    try:
+
+        maintenance_history = get_maintenance_history(
+            equipment_id
+        )
+
+    except Exception:
+
+        maintenance_history = []
+
+    if maintenance_history is None:
+
+        maintenance_history = []
+
+    # ------------------------------------------------------
+    # REPAIR HISTORY
+    # ------------------------------------------------------
+
+    try:
+
+        repair_history = get_repairs(
+            equipment_id
+        )
+
+    except Exception:
+
+        repair_history = []
+
+    if repair_history is None:
+
+        repair_history = []
+
+    # ------------------------------------------------------
+    # WORK ORDERS
+    # ------------------------------------------------------
+
+    try:
+
+        work_orders = get_work_orders_by_equipment(
+            equipment_id
+        )
+
+    except Exception:
+
+        work_orders = []
+
+    if work_orders is None:
+
+        work_orders = []
+
+    # ------------------------------------------------------
+    # NORMALIZE LIST DATA
+    # ------------------------------------------------------
+
+    def normalize_record(record):
+
+        if hasattr(record, "model_dump"):
+
+            return record.model_dump()
+
+        if hasattr(record, "dict"):
+
+            return record.dict()
+
+        try:
+
+            return dict(record)
+
+        except Exception:
+
+            return record
+
+    maintenance_history = [
+        normalize_record(record)
+        for record in maintenance_history
+    ]
+
+    repair_history = [
+        normalize_record(record)
+        for record in repair_history
+    ]
+
+    work_orders = [
+        normalize_record(record)
+        for record in work_orders
+    ]
+
+    # ------------------------------------------------------
+    # HEALTH SCORE
+    # ------------------------------------------------------
+
+    health_score = health_data.get(
+        "health_score",
+        health_data.get(
+            "current_health_score",
+            100
+        )
+    )
+
+    try:
+
+        health_score = float(
+            health_score
+        )
+
+    except (TypeError, ValueError):
+
+        health_score = 100.0
+
+    health_score = max(
+        0,
+        min(
+            100,
+            health_score
+        )
+    )
+
+    # ------------------------------------------------------
+    # RISK SCORE
+    # ------------------------------------------------------
+
+    risk_score = health_data.get(
+        "risk_score",
+        100 - health_score
+    )
+
+    try:
+
+        risk_score = float(
+            risk_score
+        )
+
+    except (TypeError, ValueError):
+
+        risk_score = 100 - health_score
+
+    risk_score = max(
+        0,
+        min(
+            100,
+            risk_score
+        )
+    )
+
+    # ------------------------------------------------------
+    # RISK LEVEL
+    # ------------------------------------------------------
+
+    if risk_score >= 75:
+
+        risk_level = "Critical"
+
+    elif risk_score >= 50:
+
+        risk_level = "High"
+
+    elif risk_score >= 25:
+
+        risk_level = "Medium"
+
+    else:
+
+        risk_level = "Low"
+
+    # ------------------------------------------------------
+    # HEALTH STATUS
+    # ------------------------------------------------------
+
+    if health_score >= 90:
+
+        health_status = "Healthy"
+
+    elif health_score >= 75:
+
+        health_status = "Stable"
+
+    elif health_score >= 50:
+
+        health_status = "At Risk"
+
+    else:
+
+        health_status = "Critical"
+
+    # ------------------------------------------------------
+    # TREND
+    # ------------------------------------------------------
+
+    trend = health_data.get(
+        "trend",
+        health_data.get(
+            "overall_trend",
+            "Unknown"
+        )
+    )
+
+    # ------------------------------------------------------
+    # RELIABILITY
+    # ------------------------------------------------------
+
+    reliability_score = reliability_data.get(
+        "reliability_score",
+        reliability_data.get(
+            "reliability",
+            None
+        )
+    )
+
+    reliability_status = reliability_data.get(
+        "status",
+        reliability_data.get(
+            "reliability_status",
+            None
+        )
+    )
+
+    # ------------------------------------------------------
+    # MAINTENANCE STATUS
+    # ------------------------------------------------------
+
+    maintenance_count = len(
+        maintenance_history
+    )
+
+    repair_count = len(
+        repair_history
+    )
+
+    if maintenance_count == 0:
+
+        maintenance_status = (
+            "No maintenance record"
+        )
+
+    else:
+
+        maintenance_status = (
+            "Maintenance records available"
+        )
+
+    # ------------------------------------------------------
+    # WORK ORDER INTELLIGENCE
+    # ------------------------------------------------------
+
+    open_work_orders = []
+
+    for work_order in work_orders:
+
+        status = str(
+            work_order.get(
+                "status",
+                ""
+            )
+        ).strip().lower()
+
+        if status not in [
+            "completed",
+            "cancelled"
+        ]:
+
+            open_work_orders.append(
+                work_order
+            )
+
+    # ------------------------------------------------------
+    # RISK FACTORS
+    # ------------------------------------------------------
+
+    risk_factors = []
+
+    if health_score < 75:
+
+        risk_factors.append(
+            "Equipment health is below the stable threshold."
+        )
+
+    if risk_score >= 25:
+
+        risk_factors.append(
+            "Equipment risk requires monitoring."
+        )
+
+    if trend == "Deteriorating":
+
+        risk_factors.append(
+            "Equipment condition is deteriorating."
+        )
+
+    if maintenance_count == 0:
+
+        risk_factors.append(
+            "No recorded maintenance activity."
+        )
+
+    if repair_count >= 2:
+
+        risk_factors.append(
+            "Multiple repair events have been recorded."
+        )
+
+    if len(open_work_orders) > 0:
+
+        risk_factors.append(
+            f"{len(open_work_orders)} open work order(s) require attention."
+        )
+
+    if not risk_factors:
+
+        risk_factors.append(
+            "No major risk factors detected from available records."
+        )
+
+    # ------------------------------------------------------
+    # RECOMMENDED ACTION
+    # ------------------------------------------------------
+
+    if risk_level == "Critical":
+
+        recommended_action = (
+            "Immediate inspection and corrective action required."
+        )
+
+    elif risk_level == "High":
+
+        recommended_action = (
+            "Prioritize equipment inspection and maintenance."
+        )
+
+    elif trend == "Deteriorating":
+
+        recommended_action = (
+            "Schedule preventive maintenance and increase monitoring."
+        )
+
+    elif maintenance_count == 0:
+
+        recommended_action = (
+            "Schedule an initial maintenance inspection."
+        )
+
+    elif len(open_work_orders) > 0:
+
+        recommended_action = (
+            "Review and complete outstanding work orders."
+        )
+
+    else:
+
+        recommended_action = (
+            "Continue routine monitoring and preventive maintenance."
+        )
+
+    # ------------------------------------------------------
+    # LAST MAINTENANCE / SERVICE
+    # ------------------------------------------------------
+
+    last_maintenance = equipment_data.get(
+        "last_maintenance"
+    )
+
+    if maintenance_history:
+
+        latest_maintenance = maintenance_history[-1]
+
+        last_maintenance = (
+            latest_maintenance.get(
+                "maintenance_date",
+                last_maintenance
+            )
+        )
+
+    # ------------------------------------------------------
+    # SCANNER CONFIDENCE
+    # ------------------------------------------------------
+
+    confidence_points = 0
+
+    if equipment_data.get("equipment_id"):
+        confidence_points += 20
+
+    if equipment_data.get("name"):
+        confidence_points += 20
+
+    if equipment_data.get("category"):
+        confidence_points += 15
+
+    if equipment_data.get("location"):
+        confidence_points += 15
+
+    if health_data:
+        confidence_points += 10
+
+    if reliability_data:
+        confidence_points += 10
+
+    if (
+        maintenance_history
+        or repair_history
+        or work_orders
+    ):
+        confidence_points += 10
+
+    scanner_confidence = min(
+        confidence_points,
+        100
+    )
+
+    # ------------------------------------------------------
+    # PROFILE
+    # ------------------------------------------------------
+
+    profile = {
+
+        "scanner_version":
+            "v3.5.6",
+
+        "scanner_status":
+            "Intelligent Profile Generated",
+
+        "scanner_confidence":
+            scanner_confidence,
+
+        "equipment": {
+
+            "equipment_id":
+                equipment_data.get(
+                    "equipment_id",
+                    equipment_id
+                ),
+
+            "name":
+                equipment_data.get(
+                    "name"
+                ),
+
+            "category":
+                equipment_data.get(
+                    "category"
+                ),
+
+            "manufacturer":
+                equipment_data.get(
+                    "manufacturer"
+                ),
+
+            "model":
+                equipment_data.get(
+                    "model"
+                ),
+
+            "serial_number":
+                equipment_data.get(
+                    "serial_number"
+                ),
+
+            "location":
+                equipment_data.get(
+                    "location"
+                ),
+
+            "status":
+                equipment_data.get(
+                    "status"
+                ),
+
+            "installation_date":
+                equipment_data.get(
+                    "installation_date"
+                )
+
+        },
+
+        "health": {
+
+            "health_score":
+                health_score,
+
+            "health_status":
+                health_status,
+
+            "risk_score":
+                risk_score,
+
+            "risk_level":
+                risk_level,
+
+            "trend":
+                trend
+
+        },
+
+        "reliability": {
+
+            "reliability_score":
+                reliability_score,
+
+            "reliability_status":
+                reliability_status,
+
+            "mtbf_days":
+                reliability_data.get(
+                    "mtbf_days"
+                ),
+
+            "mttr_days":
+                reliability_data.get(
+                    "mttr_days"
+                ),
+
+            "failure_frequency":
+                reliability_data.get(
+                    "failure_frequency"
+                )
+
+        },
+
+        "maintenance": {
+
+            "status":
+                maintenance_status,
+
+            "maintenance_count":
+                maintenance_count,
+
+            "last_maintenance":
+                last_maintenance,
+
+            "recent_history":
+                maintenance_history[-5:]
+
+        },
+
+        "repairs": {
+
+            "total_repairs":
+                repair_count,
+
+            "recent_repairs":
+                repair_history[-5:]
+
+        },
+
+        "work_orders": {
+
+            "total":
+                len(work_orders),
+
+            "open":
+                len(open_work_orders),
+
+            "active_work_orders":
+                open_work_orders
+
+        },
+
+        "risk_factors":
+            risk_factors,
+
+        "recommended_action":
+            recommended_action
+
+    }
+
+    return {
+
+        "message":
+            "Intelligent equipment scanner profile generated successfully.",
+
+        "profile":
+            profile
+    }
+
+
+# ==========================================================
+# INTELLIGENT SCANNER — QUICK LOOKUP
+# FuElectric-AI v3.5.6
+# ==========================================================
+
+@app.get("/scanner/{equipment_id}")
+def scanner_lookup(
+    equipment_id: str
+):
+
+    equipment_id = equipment_id.strip()
+
+    if not equipment_id:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Equipment ID is required."
+        )
+
+    equipment = get_equipment_by_id(
+        equipment_id
+    )
+
+    if equipment is None:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Equipment not found."
+        )
+
+    return {
+        "message":
+            "Equipment identified successfully.",
+
+        "equipment_id":
+            equipment_id,
+
+        "scanner_action":
+            "View intelligent equipment profile",
+
+        "profile_endpoint":
+            f"/scanner/profile/{equipment_id}"
+    }
+
+# ==========================================================
 # EQUIPMENT RELIABILITY ANALYTICS — FuElectric-AI v3.5.3
 # ==========================================================
 
@@ -1130,22 +1850,6 @@ def equipment_reliability(
     }
 
 # ==========================================================
-# EQUIPMENT RELIABILITY ANALYTICS — FuElectric-AI v3.5.3
-# ==========================================================
-
-@app.get("/reliability")
-def reliability_analytics():
-
-    return {
-        "message":
-            "Equipment reliability analytics generated successfully.",
-
-        "equipment":
-            get_all_equipment_reliability()
-    }
-
-
-# ==========================================================
 # RELIABILITY ANALYTICS DASHBOARD
 # FuElectric-AI v3.5.3
 # ==========================================================
@@ -1212,82 +1916,6 @@ def reliability_analytics_dashboard():
 
         "ranking":
             get_reliability_ranking()
-    }
-
-# ==========================================================
-# RELIABILITY SUMMARY
-# ==========================================================
-
-@app.get("/reliability/summary")
-def reliability_summary():
-
-    return {
-        "message":
-            "Reliability summary generated successfully.",
-
-        "summary":
-            get_reliability_summary()
-    }
-
-
-# ==========================================================
-# RELIABILITY ALERTS
-# ==========================================================
-
-def get_reliability_alerts():
-
-    """Return equipment that requires a reliability alert."""
-
-    return get_deteriorating_equipment()
-
-
-@app.get("/reliability/alerts")
-def reliability_alerts():
-
-    return get_reliability_alerts()
-
-
-# ==========================================================
-# RELIABILITY RANKING
-# ==========================================================
-
-@app.get("/reliability/ranking")
-def reliability_ranking():
-
-    return {
-        "message":
-            "Equipment reliability ranking generated successfully.",
-
-        "ranking":
-            get_reliability_ranking()
-    }
-
-
-# ==========================================================
-# SINGLE EQUIPMENT RELIABILITY
-# ==========================================================
-
-@app.get("/equipment/{equipment_id}/reliability")
-def equipment_reliability(
-    equipment_id: str
-):
-
-    reliability = get_equipment_reliability(
-        equipment_id
-    )
-
-    if reliability is None:
-
-        raise HTTPException(
-            status_code=404,
-            detail="Equipment not found."
-        )
-
-    return {
-        "message":
-            "Equipment reliability analytics generated successfully.",
-
-        **reliability
     }
 
 # ==========================================================
@@ -1887,14 +2515,11 @@ def get_equipment_health_history(
             recommendations
     }
 
-
 # ==========================================================
-# API ENDPOINT
+# v3.5.4 — HEALTH & RISK HISTORY API
 # ==========================================================
 
-@app.get(
-    "/health-risk-history/{equipment_id}"
-)
+@app.get("/health-risk-history/{equipment_id}")
 def health_risk_history(
     equipment_id: str,
     months: int = 3

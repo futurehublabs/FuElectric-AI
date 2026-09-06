@@ -3667,203 +3667,6 @@ async function loadHealthRiskSummary() {
 
 }
 
-
-// ----------------------------------------------------------
-// EQUIPMENT RISK RANKING
-// ----------------------------------------------------------
-
-async function loadEquipmentRiskRanking() {
-
-    const container =
-        document.getElementById(
-            "risk-ranking-list"
-        ) ||
-        document.getElementById(
-            "equipment-risk-ranking"
-        );
-
-    if (!container) {
-        return;
-    }
-
-    container.innerHTML = `
-        <div class="info">
-            ⚠️ Loading equipment risk ranking...
-        </div>
-    `;
-
-    try {
-
-        const response =
-            await fetch(
-                `${API_URL}/equipment-risk-ranking`
-            );
-
-        if (!response.ok) {
-
-            throw new Error(
-                `Equipment risk ranking request failed: ${response.status}`
-            );
-
-        }
-
-        const data =
-            await response.json();
-
-        const ranking =
-            data.ranking ||
-            data.equipment ||
-            data.results ||
-            data ||
-            [];
-
-        if (
-            !Array.isArray(ranking) ||
-            ranking.length === 0
-        ) {
-
-            container.innerHTML = `
-                <div class="success">
-                    ✅ No equipment risk data available.
-                </div>
-            `;
-
-            return;
-        }
-
-        container.innerHTML = `
-
-            <div class="table-container">
-
-                <table>
-
-                    <thead>
-
-                        <tr>
-                            <th>Rank</th>
-                            <th>Equipment</th>
-                            <th>Risk Score</th>
-                            <th>Risk Level</th>
-                            <th>Health Score</th>
-                        </tr>
-
-                    </thead>
-
-                    <tbody>
-
-                        ${ranking.map(
-                            (item, index) => {
-
-                                const health =
-                                    item.health_score ??
-                                    item.health ??
-                                    null;
-
-                                return `
-
-                                    <tr>
-
-                                        <td>
-                                            <strong>
-                                                ${index + 1}
-                                            </strong>
-                                        </td>
-
-                                        <td>
-
-                                            <strong>
-                                                ${escapeHtml(
-                                                    item.name ||
-                                                    item.equipment_name ||
-                                                    item.equipment_id ||
-                                                    "Unknown"
-                                                )}
-                                            </strong>
-
-                                            <br>
-
-                                            <small>
-                                                ${escapeHtml(
-                                                    item.equipment_id ||
-                                                    ""
-                                                )}
-                                            </small>
-
-                                        </td>
-
-                                        <td>
-                                            ${escapeHtml(
-                                                item.risk_score ??
-                                                item.score ??
-                                                0
-                                            )}
-                                        </td>
-
-                                        <td>
-
-                                            <span class="badge">
-
-                                                ${escapeHtml(
-                                                    item.risk_level ||
-                                                    item.risk ||
-                                                    "Unknown"
-                                                )}
-
-                                            </span>
-
-                                        </td>
-
-                                        <td>
-
-                                            ${
-                                                health !== null
-                                                    ? `${escapeHtml(health)}%`
-                                                    : "N/A"
-                                            }
-
-                                        </td>
-
-                                    </tr>
-
-                                `;
-
-                            }
-                        ).join("")}
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-        `;
-
-    }
-
-    catch (error) {
-
-        console.error(
-            "Equipment Risk Ranking Error:",
-            error
-        );
-
-        container.innerHTML = `
-            <div class="error">
-
-                ❌ Unable to load equipment risk ranking.
-
-                <br>
-
-                ${escapeHtml(error.message)}
-
-            </div>
-        `;
-
-    }
-
-}
-
-
 // ----------------------------------------------------------
 // DETERIORATING EQUIPMENT
 // ----------------------------------------------------------
@@ -4546,20 +4349,6 @@ async function loadEquipmentTrend() {
 
 }
 
-// ----------------------------------------------------------
-// LOAD ALL v3.5.4 INTELLIGENCE
-// ----------------------------------------------------------
-
-async function loadHealthRiskIntelligence() {
-
-    await Promise.all([
-        loadHealthRiskSummary(),
-        loadEquipmentRiskRanking(),
-        loadDeterioratingEquipment()
-    ]);
-
-}
-
 
 // ----------------------------------------------------------
 // INITIALIZE v3.5.4 EQUIPMENT SELECTOR
@@ -4709,10 +4498,6 @@ window.addEventListener(
 
         await loadEquipment();
 
-        initializeHealthTrendSelector();
-        await loadHealthRiskIntelligence();
-
-
         // --------------------------------------------------
         // WORK ORDERS
         // --------------------------------------------------
@@ -4759,13 +4544,13 @@ window.addEventListener(
 
         await loadMaintenanceAlerts();
 
-        // --------------------------------------------------
-       // HEALTH & RISK INTELLIGENCE — v3.5.4
-      // --------------------------------------------------
+// --------------------------------------------------
+// HEALTH & RISK INTELLIGENCE — v3.5.4
+// --------------------------------------------------
 
-        await loadHealthRiskIntelligence();
+       await loadHealthRiskIntelligence();
 
-        initializeHealthRiskSelectors();
+       initializeHealthTrendSelector();
 
         // --------------------------------------------------
         // APPLICATION READY
@@ -5330,369 +5115,6 @@ console.log("INSIGHTS ARRAY CREATED:", insights);
 // HEALTH & RISK INTELLIGENCE — FuElectric-AI v3.5.4
 // ==========================================================
 
-
-// ----------------------------------------------------------
-// EQUIPMENT HEALTH TREND
-// ----------------------------------------------------------
-
-async function loadEquipmentHealthTrend() {
-
-    const selector =
-        document.getElementById(
-            "health-trend-equipment-select"
-        );
-
-    const container =
-        document.getElementById(
-            "equipment-health-trend"
-        );
-
-    if (!selector || !container) {
-        return;
-    }
-
-    const equipmentId =
-        selector.value;
-
-    if (!equipmentId) {
-
-        container.innerHTML = `
-            <div class="info">
-                📈 Select equipment to view health trend.
-            </div>
-        `;
-
-        return;
-    }
-
-    container.innerHTML = `
-        <div class="info">
-            📈 Loading equipment health trend...
-        </div>
-    `;
-
-    try {
-
-        const response =
-            await fetch(
-                `${API_URL}/equipment/${encodeURIComponent(
-                    equipmentId
-                )}/health-trend`
-            );
-
-        const data =
-            await response.json();
-
-        if (!response.ok) {
-
-            throw new Error(
-                data.detail ||
-                "Health trend request failed."
-            );
-
-        }
-
-        const trend =
-            data.trend ||
-            data.health_trend ||
-            data.history ||
-            [];
-
-        if (
-            !Array.isArray(trend) ||
-            trend.length === 0
-        ) {
-
-            container.innerHTML = `
-                <div class="info">
-                    ℹ️ No health trend data available
-                    for this equipment yet.
-                </div>
-            `;
-
-            return;
-        }
-
-        container.innerHTML = `
-
-            <div class="table-container">
-
-                <table>
-
-                    <thead>
-
-                        <tr>
-                            <th>Date</th>
-                            <th>Health Score</th>
-                            <th>Status</th>
-                        </tr>
-
-                    </thead>
-
-                    <tbody>
-
-                        ${trend.map(item => `
-
-                            <tr>
-
-                                <td>
-                                    ${escapeHtml(
-                                        item.date ||
-                                        item.timestamp ||
-                                        item.recorded_at ||
-                                        "N/A"
-                                    )}
-                                </td>
-
-                                <td>
-
-                                    <strong>
-                                        ${
-                                            item.health_score ??
-                                            item.score ??
-                                            0
-                                        }%
-                                    </strong>
-
-                                </td>
-
-                                <td>
-                                    ${escapeHtml(
-                                        item.status ||
-                                        "Unknown"
-                                    )}
-                                </td>
-
-                            </tr>
-
-                        `).join("")}
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-        `;
-
-    }
-    catch (error) {
-
-        console.error(
-            "Equipment Health Trend Error:",
-            error
-        );
-
-        container.innerHTML = `
-            <div class="error">
-
-                ❌ Unable to load equipment health trend.
-
-                <br><br>
-
-                ${escapeHtml(
-                    error.message
-                )}
-
-            </div>
-        `;
-
-    }
-
-}
-
-
-// ----------------------------------------------------------
-// EQUIPMENT RISK RANKING
-// ----------------------------------------------------------
-
-async function loadEquipmentRiskRanking() {
-
-    const container =
-        document.getElementById(
-            "equipment-risk-ranking"
-        );
-
-    if (!container) {
-        return;
-    }
-
-    container.innerHTML = `
-        <div class="info">
-            ⚠️ Loading equipment risk ranking...
-        </div>
-    `;
-
-    try {
-
-        const response =
-            await fetch(
-                `${API_URL}/equipment-risk-ranking`
-            );
-
-        const data =
-            await response.json();
-
-        if (!response.ok) {
-
-            throw new Error(
-                data.detail ||
-                "Equipment risk ranking request failed."
-            );
-
-        }
-
-        const ranking =
-            data.ranking ||
-            data.equipment ||
-            data.results ||
-            data ||
-            [];
-
-        if (
-            !Array.isArray(ranking) ||
-            ranking.length === 0
-        ) {
-
-            container.innerHTML = `
-                <div class="success">
-                    ✅ No equipment risk data available.
-                </div>
-            `;
-
-            return;
-        }
-
-        container.innerHTML = `
-
-            <div class="table-container">
-
-                <table>
-
-                    <thead>
-
-                        <tr>
-                            <th>Rank</th>
-                            <th>Equipment</th>
-                            <th>Risk Score</th>
-                            <th>Risk Level</th>
-                            <th>Health Score</th>
-                        </tr>
-
-                    </thead>
-
-                    <tbody>
-
-                        ${ranking.map((item, index) => `
-
-                            <tr>
-
-                                <td>
-                                    <strong>
-                                        ${index + 1}
-                                    </strong>
-                                </td>
-
-                                <td>
-
-                                    <strong>
-                                        ${escapeHtml(
-                                            item.name ||
-                                            item.equipment_name ||
-                                            item.equipment_id ||
-                                            "Unknown"
-                                        )}
-                                    </strong>
-
-                                    <br>
-
-                                    <small>
-                                        ${escapeHtml(
-                                            item.equipment_id ||
-                                            ""
-                                        )}
-                                    </small>
-
-                                </td>
-
-                                <td>
-                                    ${
-                                        item.risk_score ??
-                                        item.score ??
-                                        0
-                                    }
-                                </td>
-
-                                <td>
-
-                                    <span class="badge">
-                                        ${escapeHtml(
-                                            item.risk_level ||
-                                            item.risk ||
-                                            "Unknown"
-                                        )}
-                                    </span>
-
-                                </td>
-
-                                <td>
-
-                                    ${
-                                        item.health_score ??
-                                        item.health ??
-                                        "N/A"
-                                    }
-
-                                    ${
-                                        (
-                                            item.health_score ??
-                                            item.health
-                                        ) !== "N/A"
-                                            ? "%"
-                                            : ""
-                                    }
-
-                                </td>
-
-                            </tr>
-
-                        `).join("")}
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-        `;
-
-    }
-    catch (error) {
-
-        console.error(
-            "Equipment Risk Ranking Error:",
-            error
-        );
-
-        container.innerHTML = `
-            <div class="error">
-
-                ❌ Unable to load equipment risk ranking.
-
-                <br><br>
-
-                ${escapeHtml(
-                    error.message
-                )}
-
-            </div>
-        `;
-
-    }
-
-}
-
-
 // ----------------------------------------------------------
 // HEALTH & RISK SUMMARY
 // ----------------------------------------------------------
@@ -6067,15 +5489,43 @@ async function loadHealthRiskIntelligence() {
     await Promise.all([
         loadHealthRiskSummary(),
         loadEquipmentRiskRanking(),
+        loadHealthTrendEquipmentSelector(),
         loadDeterioratingEquipment()
     ]);
 
 }
 
+// ----------------------------------------------------------
+// REFRESH v3.5.4
+// ----------------------------------------------------------
 
-// ----------------------------------------------------------
-// HEALTH TREND SELECTOR
-// ----------------------------------------------------------
+async function refreshHealthRiskIntelligence() {
+
+    await loadHealthRiskIntelligence();
+
+    const selector =
+        document.getElementById(
+            "health-risk-equipment-select"
+        );
+
+    if (
+        selector &&
+        selector.value
+    ) {
+
+        await loadEquipmentHealthTrend();
+
+    }
+
+    showMessage(
+        "Health & Risk Intelligence refreshed successfully."
+    );
+
+}
+
+// ==========================================================
+// v3.5.4 — HEALTH TREND SELECTOR
+// ==========================================================
 
 function initializeHealthTrendSelector() {
 
@@ -6085,13 +5535,22 @@ function initializeHealthTrendSelector() {
         );
 
     if (!selector) {
+
+        console.warn(
+            "⚠️ Health trend selector not found."
+        );
+
         return;
     }
 
     selector.onchange =
         loadEquipmentHealthTrend;
 
+    console.log(
+        "✅ Health trend selector initialized."
+    );
 }
+
 
 
 // ----------------------------------------------------------
@@ -6123,290 +5582,98 @@ async function refreshHealthRiskIntelligence() {
 }
 
 // ==========================================================
-// FuElectric-AI v3.5.3 + v3.5.4
-// EQUIPMENT RELIABILITY + HEALTH & RISK FRONTEND
+// FuElectric-AI
+// v3.5.3 + v3.5.4 INTELLIGENCE LAYER
+// CLEAN INTEGRATED FRONTEND
 // ==========================================================
-
-
-// ==========================================================
+//
 // v3.5.3 — EQUIPMENT RELIABILITY ANALYTICS
+// v3.5.4 — HEALTH & RISK INTELLIGENCE
+//
+// IMPORTANT:
+// This is the SINGLE final intelligence block.
+// It replaces all previous v3.5.3 / v3.5.4 intelligence
+// blocks from line 5200 to the end of app.js.
+//
+// EXISTING HTML IDS SUPPORTED:
+//
+// Reliability:
+//   reliability-ranking-list
+//   reliability-total-equipment
+//   reliability-average-score
+//   reliability-highly-reliable
+//   reliability-reliable
+//   reliability-moderate
+//   reliability-low
+//   reliability-equipment-select
+//   reliability-detail-result
+//
+// Health:
+//   equipment-health-select
+//   health-trend-result
+//   health-risk-summary
+//   equipment-risk-ranking
+//   risk-ranking-list
+//   deteriorating-equipment
+//   deteriorating-equipment-list
+//
+// BACKEND ENDPOINTS:
+//
+// v3.5.3
+// GET /reliability
+// GET /reliability/summary
+//
+// v3.5.4
+// GET /health-risk-summary
+// GET /health-risk-ranking
+// GET /health-risk-deteriorating
+// GET /health-risk-history/{equipment_id}?months=3
+//
 // ==========================================================
-
-async function loadReliabilityAnalytics() {
-
-    const rankingContainer =
-        document.getElementById(
-            "reliability-ranking-list"
-        );
-
-    if (!rankingContainer) {
-        console.error(
-            "Reliability ranking container not found."
-        );
-        return;
-    }
-
-    rankingContainer.innerHTML =
-        `<p class="loading">
-            Loading reliability analytics...
-        </p>`;
-
-    try {
-
-        const response = await fetch(
-            `${API_URL}/reliability/analytics`
-        );
-
-        if (!response.ok) {
-
-            throw new Error(
-                `Reliability request failed: ${response.status}`
-            );
-
-        }
-
-        const data =
-            await response.json();
-
-        console.log(
-            "Reliability Analytics:",
-            data
-        );
-
-        // --------------------------------------------------
-        // SUMMARY
-        // --------------------------------------------------
-
-        setElementText(
-            "reliability-total-equipment",
-            data.total_equipment ?? 0
-        );
-
-        setElementText(
-            "reliability-average-score",
-            data.average_reliability !== undefined
-                ? `${Number(data.average_reliability).toFixed(1)}%`
-                : "--"
-        );
-
-        setElementText(
-            "reliability-highly-reliable",
-            data.highly_reliable ?? 0
-        );
-
-        setElementText(
-            "reliability-reliable",
-            data.reliable ?? 0
-        );
-
-        setElementText(
-            "reliability-moderate",
-            data.moderate ?? 0
-        );
-
-        setElementText(
-            "reliability-low",
-            data.low_reliability ??
-            data.low ??
-            0
-        );
-
-
-        // --------------------------------------------------
-        // RANKING
-        // --------------------------------------------------
-
-        const ranking =
-            data.ranking ||
-            data.equipment ||
-            data.reliability_ranking ||
-            [];
-
-        if (!Array.isArray(ranking) ||
-            ranking.length === 0) {
-
-            rankingContainer.innerHTML =
-                `<div class="info">
-                    No reliability data available.
-                </div>`;
-
-            return;
-        }
-
-
-        rankingContainer.innerHTML = `
-
-            <div class="table-container">
-
-                <table class="reliability-table">
-
-                    <thead>
-
-                        <tr>
-                            <th>Rank</th>
-                            <th>Equipment</th>
-                            <th>Reliability</th>
-                            <th>Status</th>
-                            <th>Repairs</th>
-                            <th>Maintenance</th>
-                        </tr>
-
-                    </thead>
-
-                    <tbody>
-
-                        ${ranking.map(
-                            (item, index) => {
-
-                                const score =
-                                    item.reliability_score ??
-                                    item.reliability ??
-                                    item.score ??
-                                    0;
-
-                                const status =
-                                    item.status ??
-                                    item.reliability_status ??
-                                    getReliabilityStatus(score);
-
-                                return `
-
-                                    <tr>
-
-                                        <td>
-                                            <strong>
-                                                ${index + 1}
-                                            </strong>
-                                        </td>
-
-                                        <td>
-                                            <strong>
-                                                ${escapeHtml(
-                                                    item.equipment_id ??
-                                                    item.id ??
-                                                    "Unknown"
-                                                )}
-                                            </strong>
-
-                                            ${
-                                                item.name
-                                                    ? `<br>
-                                                       <small>
-                                                       ${escapeHtml(item.name)}
-                                                       </small>`
-                                                    : ""
-                                            }
-
-                                        </td>
-
-                                        <td class="reliability-score">
-
-                                            ${formatNumber(score)}%
-
-                                        </td>
-
-                                        <td>
-
-                                            <span class="badge">
-                                                ${escapeHtml(status)}
-                                            </span>
-
-                                        </td>
-
-                                        <td>
-                                            ${item.total_repairs ??
-                                              item.repairs ??
-                                              0}
-                                        </td>
-
-                                        <td>
-                                            ${item.maintenance_records ??
-                                              item.maintenance_count ??
-                                              item.maintenance ??
-                                              0}
-                                        </td>
-
-                                    </tr>
-
-                                `;
-
-                            }
-                        ).join("")}
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-        `;
-
-    }
-
-    catch (error) {
-
-        console.error(
-            "Reliability analytics error:",
-            error
-        );
-
-        rankingContainer.innerHTML = `
-
-            <div class="error">
-
-                ❌ Unable to load reliability analytics.
-
-                <br>
-
-                ${escapeHtml(error.message)}
-
-            </div>
-
-        `;
-
-    }
-
-}
-
-// ==========================================================
-// EQUIPMENT RELIABILITY ANALYTICS — FuElectric-AI v3.5.3
-// CLEAN INTEGRATED FRONTEND MODULE
-// ==========================================================
-
-/*
-    v3.5.3 FRONTEND RESPONSIBILITIES
-
-    1. Load complete reliability analytics
-    2. Load reliability summary
-    3. Display reliability summary cards
-    4. Display equipment reliability ranking
-    5. Populate equipment reliability selector
-    6. Display selected equipment reliability
-    7. Handle API errors cleanly
-
-    BACKEND ENDPOINTS USED:
-
-        GET /reliability
-        GET /reliability/summary
-
-    IMPORTANT:
-    Do NOT add alternative/invented reliability endpoints here.
-*/
 
 
 // ==========================================================
-// RELIABILITY STATE
+// GLOBAL INTELLIGENCE STATE
 // ==========================================================
 
 let reliabilityData = [];
+
 let reliabilitySummaryData = {};
 
 
 // ==========================================================
-// HELPER — GET RELIABILITY SCORE
+// COMMON HELPERS
 // ==========================================================
 
-function getReliabilityScore(item) {
+function intelligenceSetText(id, value) {
+
+    const element =
+        document.getElementById(id);
+
+    if (element) {
+        element.textContent = value;
+    }
+
+}
+
+
+function intelligenceFormatNumber(value) {
+
+    const number =
+        Number(value);
+
+    return Number.isFinite(number)
+        ? number.toFixed(1)
+        : "0.0";
+
+}
+
+
+function intelligenceGetReliabilityScore(item) {
+
+    if (!item) {
+        return 0;
+    }
 
     return Number(
         item.reliability_score ??
@@ -6418,13 +5685,14 @@ function getReliabilityScore(item) {
 }
 
 
-// ==========================================================
-// HELPER — RELIABILITY STATUS
-// ==========================================================
+function intelligenceGetReliabilityStatus(item) {
 
-function getReliabilityStatus(item) {
+    if (!item) {
+        return "Unknown";
+    }
 
-    const score = getReliabilityScore(item);
+    const score =
+        intelligenceGetReliabilityScore(item);
 
     return (
         item.reliability_status ??
@@ -6443,21 +5711,16 @@ function getReliabilityStatus(item) {
 }
 
 
-// ==========================================================
-// HELPER — STATUS CLASS
-// ==========================================================
+function intelligenceGetReliabilityClass(score) {
 
-function getReliabilityClass(score) {
+    const value =
+        Number(score);
 
-    if (score >= 90) {
+    if (value >= 75) {
         return "reliability-high";
     }
 
-    if (score >= 75) {
-        return "reliability-high";
-    }
-
-    if (score >= 50) {
+    if (value >= 50) {
         return "reliability-moderate";
     }
 
@@ -6467,50 +5730,43 @@ function getReliabilityClass(score) {
 
 
 // ==========================================================
-// LOAD COMPLETE RELIABILITY ANALYTICS
+// v3.5.3
+// RELIABILITY ANALYTICS
 // ==========================================================
 
 async function loadReliabilityAnalytics() {
 
     const rankingContainer =
-        document.getElementById("reliability-ranking-list");
-
-    if (rankingContainer) {
-
-        rankingContainer.innerHTML =
-            "<p class='loading'>Loading reliability analytics...</p>";
-
-    }
-
+        document.getElementById(
+            "reliability-ranking-list"
+        );
 
     try {
 
-        // --------------------------------------------------
-        // LOAD COMPLETE RELIABILITY DATA
-        // --------------------------------------------------
-
         const response =
-    await fetch(`${API_URL}/reliability`);
+            await fetch(
+                `${API_URL}/reliability`
+            );
 
-if (!response.ok) {
+        if (!response.ok) {
 
-    throw new Error(
-        `Reliability request failed: ${response.status}`
-    );
+            throw new Error(
+                `Reliability request failed: ${response.status}`
+            );
 
-}
+        }
 
-const data =
-    await response.json();
+        const data =
+            await response.json();
 
         console.log(
-            "v3.5.3 Reliability Analytics:",
+            "✅ v3.5.3 Reliability Analytics:",
             data
         );
 
 
         // --------------------------------------------------
-        // NORMALIZE EQUIPMENT ARRAY
+        // NORMALIZE RELIABILITY DATA
         // --------------------------------------------------
 
         reliabilityData =
@@ -6519,40 +5775,41 @@ const data =
                 : (
                     data.equipment ??
                     data.reliability ??
-                    data.data ??
+                    data.results ??
+                    data.ranking ??
                     []
                 );
 
 
         if (!Array.isArray(reliabilityData)) {
-
             reliabilityData = [];
-
         }
 
 
         // --------------------------------------------------
-        // LOAD SUMMARY
+        // LOAD RELIABILITY SUMMARY
         // --------------------------------------------------
 
         try {
 
             const summaryResponse =
-    await fetch(`${API_URL}/reliability/summary`);
+                await fetch(
+                    `${API_URL}/reliability/summary`
+                );
 
-if (!summaryResponse.ok) {
+            if (!summaryResponse.ok) {
 
-    throw new Error(
-        `Reliability summary request failed: ${summaryResponse.status}`
-    );
+                throw new Error(
+                    `Reliability summary failed: ${summaryResponse.status}`
+                );
 
-}
+            }
 
-reliabilitySummaryData =
-    await summaryResponse.json();
+            reliabilitySummaryData =
+                await summaryResponse.json();
 
             console.log(
-                "v3.5.3 Reliability Summary:",
+                "✅ v3.5.3 Reliability Summary:",
                 reliabilitySummaryData
             );
 
@@ -6561,7 +5818,7 @@ reliabilitySummaryData =
         catch (summaryError) {
 
             console.warn(
-                "Reliability summary could not be loaded:",
+                "⚠️ Reliability summary unavailable:",
                 summaryError
             );
 
@@ -6571,7 +5828,7 @@ reliabilitySummaryData =
 
 
         // --------------------------------------------------
-        // RENDER SUMMARY
+        // RENDER
         // --------------------------------------------------
 
         renderReliabilitySummary(
@@ -6580,41 +5837,17 @@ reliabilitySummaryData =
         );
 
 
-        // --------------------------------------------------
-        // RENDER RANKING
-        // --------------------------------------------------
-
         renderReliabilityRanking(
             reliabilityData
         );
 
-
-        // --------------------------------------------------
-        // POPULATE EQUIPMENT SELECTOR
-        // --------------------------------------------------
 
         populateReliabilitySelector(
             reliabilityData
         );
 
 
-        // --------------------------------------------------
-        // SUCCESS
-        // --------------------------------------------------
-
-        if (reliabilityData.length === 0) {
-
-            if (rankingContainer) {
-
-                rankingContainer.innerHTML = `
-                    <div class="info">
-                        No reliability data is currently available.
-                    </div>
-                `;
-
-            }
-
-        }
+        initializeReliabilityAnalytics();
 
 
     }
@@ -6622,28 +5855,29 @@ reliabilitySummaryData =
     catch (error) {
 
         console.error(
-            "Reliability Analytics Error:",
+            "❌ Reliability analytics error:",
             error
         );
-
 
         if (rankingContainer) {
 
             rankingContainer.innerHTML = `
+
                 <div class="error">
+
                     ❌ Unable to load reliability analytics.
-                    <br>
-                    ${escapeHtml(error.message)}
+
+                    <br><br>
+
+                    ${escapeHtml(
+                        error.message
+                    )}
+
                 </div>
+
             `;
 
         }
-
-
-        showMessage(
-            "Could not load Equipment Reliability Analytics: " +
-            error.message
-        );
 
     }
 
@@ -6651,7 +5885,8 @@ reliabilitySummaryData =
 
 
 // ==========================================================
-// RENDER RELIABILITY SUMMARY
+// v3.5.3
+// RELIABILITY SUMMARY
 // ==========================================================
 
 function renderReliabilitySummary(
@@ -6659,15 +5894,14 @@ function renderReliabilitySummary(
     equipment
 ) {
 
-    summary = summary || {};
-    equipment = Array.isArray(equipment)
-        ? equipment
-        : [];
+    summary =
+        summary || {};
 
+    equipment =
+        Array.isArray(equipment)
+            ? equipment
+            : [];
 
-    // ------------------------------------------------------
-    // TOTAL EQUIPMENT
-    // ------------------------------------------------------
 
     const totalEquipment =
         summary.total_equipment ??
@@ -6675,18 +5909,11 @@ function renderReliabilitySummary(
         equipment.length;
 
 
-    // ------------------------------------------------------
-    // AVERAGE RELIABILITY
-    // ------------------------------------------------------
-
     let averageScore =
         summary.average_reliability ??
         summary.average_reliability_score ??
         summary.average_score;
 
-
-    // If backend summary doesn't provide it,
-    // calculate from equipment data.
 
     if (
         averageScore === undefined ||
@@ -6698,12 +5925,14 @@ function renderReliabilitySummary(
             const totalScore =
                 equipment.reduce(
                     (sum, item) =>
-                        sum + getReliabilityScore(item),
+                        sum +
+                        intelligenceGetReliabilityScore(item),
                     0
                 );
 
             averageScore =
-                totalScore / equipment.length;
+                totalScore /
+                equipment.length;
 
         }
 
@@ -6715,10 +5944,6 @@ function renderReliabilitySummary(
 
     }
 
-
-    // ------------------------------------------------------
-    // CATEGORY COUNTS
-    // ------------------------------------------------------
 
     let highlyReliable =
         summary.highly_reliable ??
@@ -6739,10 +5964,6 @@ function renderReliabilitySummary(
         summary.low_reliability_count;
 
 
-    // ------------------------------------------------------
-    // FALLBACK CATEGORY CALCULATION
-    // ------------------------------------------------------
-
     if (
         highlyReliable === undefined ||
         reliable === undefined ||
@@ -6756,87 +5977,85 @@ function renderReliabilitySummary(
         low = 0;
 
 
-        equipment.forEach(item => {
+        equipment.forEach(
+            item => {
 
-            const score =
-                getReliabilityScore(item);
+                const score =
+                    intelligenceGetReliabilityScore(item);
 
-            if (score >= 90) {
+                if (score >= 90) {
 
-                highlyReliable++;
+                    highlyReliable++;
+
+                }
+
+                else if (score >= 75) {
+
+                    reliable++;
+
+                }
+
+                else if (score >= 50) {
+
+                    moderate++;
+
+                }
+
+                else {
+
+                    low++;
+
+                }
 
             }
-
-            else if (score >= 75) {
-
-                reliable++;
-
-            }
-
-            else if (score >= 50) {
-
-                moderate++;
-
-            }
-
-            else {
-
-                low++;
-
-            }
-
-        });
+        );
 
     }
 
 
-    // ------------------------------------------------------
-    // UPDATE HTML
-    // ------------------------------------------------------
-
-    const values = {
-
-        "reliability-total-equipment":
-            totalEquipment,
-
-        "reliability-average-score":
-            `${Number(averageScore).toFixed(1)}%`,
-
-        "reliability-highly-reliable":
-            highlyReliable,
-
-        "reliability-reliable":
-            reliable,
-
-        "reliability-moderate":
-            moderate,
-
-        "reliability-low":
-            low
-
-    };
+    intelligenceSetText(
+        "reliability-total-equipment",
+        totalEquipment
+    );
 
 
-    Object.entries(values).forEach(
-        ([id, value]) => {
+    intelligenceSetText(
+        "reliability-average-score",
+        `${Number(
+            averageScore
+        ).toFixed(1)}%`
+    );
 
-            const element =
-                document.getElementById(id);
 
-            if (element) {
+    intelligenceSetText(
+        "reliability-highly-reliable",
+        highlyReliable
+    );
 
-                element.textContent = value;
 
-            }
+    intelligenceSetText(
+        "reliability-reliable",
+        reliable
+    );
 
-        }
+
+    intelligenceSetText(
+        "reliability-moderate",
+        moderate
+    );
+
+
+    intelligenceSetText(
+        "reliability-low",
+        low
     );
 
 }
 
 
 // ==========================================================
-// RENDER RELIABILITY RANKING
+// v3.5.3
+// RELIABILITY RANKING
 // ==========================================================
 
 function renderReliabilityRanking(
@@ -6849,7 +6068,9 @@ function renderReliabilityRanking(
         );
 
 
-    if (!container) return;
+    if (!container) {
+        return;
+    }
 
 
     if (
@@ -6858,9 +6079,13 @@ function renderReliabilityRanking(
     ) {
 
         container.innerHTML = `
+
             <div class="info">
+
                 No reliability ranking data available.
+
             </div>
+
         `;
 
         return;
@@ -6868,22 +6093,13 @@ function renderReliabilityRanking(
     }
 
 
-    // ------------------------------------------------------
-    // SORT BY RELIABILITY SCORE
-    // HIGHEST → LOWEST
-    // ------------------------------------------------------
-
     const ranked =
         [...equipment].sort(
             (a, b) =>
-                getReliabilityScore(b) -
-                getReliabilityScore(a)
+                intelligenceGetReliabilityScore(b) -
+                intelligenceGetReliabilityScore(a)
         );
 
-
-    // ------------------------------------------------------
-    // TABLE
-    // ------------------------------------------------------
 
     container.innerHTML = `
 
@@ -6896,23 +6112,16 @@ function renderReliabilityRanking(
                     <tr>
 
                         <th>Rank</th>
-
                         <th>Equipment</th>
-
-                        <th>Reliability Score</th>
-
+                        <th>Reliability</th>
                         <th>Status</th>
-
                         <th>MTBF</th>
-
                         <th>MTTR</th>
-
                         <th>Failure Frequency</th>
 
                     </tr>
 
                 </thead>
-
 
                 <tbody>
 
@@ -6920,10 +6129,14 @@ function renderReliabilityRanking(
                         (item, index) => {
 
                             const score =
-                                getReliabilityScore(item);
+                                intelligenceGetReliabilityScore(
+                                    item
+                                );
 
                             const status =
-                                getReliabilityStatus(item);
+                                intelligenceGetReliabilityStatus(
+                                    item
+                                );
 
                             const equipmentId =
                                 item.equipment_id ??
@@ -6962,12 +6175,13 @@ function renderReliabilityRanking(
                                         </strong>
                                     </td>
 
-
                                     <td>
 
                                         <strong>
                                             ${escapeHtml(
-                                                equipmentName
+                                                String(
+                                                    equipmentName
+                                                )
                                             )}
                                         </strong>
 
@@ -6975,55 +6189,65 @@ function renderReliabilityRanking(
 
                                         <small>
                                             ${escapeHtml(
-                                                equipmentId
+                                                String(
+                                                    equipmentId
+                                                )
                                             )}
                                         </small>
 
                                     </td>
 
-
                                     <td>
 
                                         <span
-                                            class="reliability-score
-                                            ${getReliabilityClass(score)}"
+                                            class="reliability-score ${intelligenceGetReliabilityClass(
+                                                score
+                                            )}"
                                         >
 
-                                            ${score.toFixed(1)}%
+                                            ${intelligenceFormatNumber(
+                                                score
+                                            )}%
 
                                         </span>
 
                                     </td>
 
-
                                     <td>
 
                                         <span
-                                            class="${getReliabilityClass(score)}"
+                                            class="${intelligenceGetReliabilityClass(
+                                                score
+                                            )}"
                                         >
 
                                             ${escapeHtml(
-                                                status
+                                                String(
+                                                    status
+                                                )
                                             )}
 
                                         </span>
 
                                     </td>
 
-
                                     <td>
-                                        ${escapeHtml(mtbf)}
+                                        ${escapeHtml(
+                                            String(mtbf)
+                                        )}
                                     </td>
-
-
-                                    <td>
-                                        ${escapeHtml(mttr)}
-                                    </td>
-
 
                                     <td>
                                         ${escapeHtml(
-                                            failureFrequency
+                                            String(mttr)
+                                        )}
+                                    </td>
+
+                                    <td>
+                                        ${escapeHtml(
+                                            String(
+                                                failureFrequency
+                                            )
                                         )}
                                     </td>
 
@@ -7046,7 +6270,8 @@ function renderReliabilityRanking(
 
 
 // ==========================================================
-// POPULATE RELIABILITY EQUIPMENT SELECTOR
+// v3.5.3
+// RELIABILITY SELECTOR
 // ==========================================================
 
 function populateReliabilitySelector(
@@ -7059,17 +6284,21 @@ function populateReliabilitySelector(
         );
 
 
-    if (!select) return;
+    if (!select) {
+        return;
+    }
 
 
-    const currentValue =
+    const previousValue =
         select.value;
 
 
     select.innerHTML = `
+
         <option value="">
             Select Equipment
         </option>
+
     `;
 
 
@@ -7078,53 +6307,58 @@ function populateReliabilitySelector(
     }
 
 
-    equipment.forEach(item => {
+    equipment.forEach(
+        item => {
 
-        const equipmentId =
-            item.equipment_id ??
-            item.id;
+            const equipmentId =
+                item.equipment_id ??
+                item.id;
 
 
-        if (!equipmentId) {
-            return;
+            if (!equipmentId) {
+                return;
+            }
+
+
+            const equipmentName =
+                item.name ??
+                item.equipment_name ??
+                equipmentId;
+
+
+            const option =
+                document.createElement(
+                    "option"
+                );
+
+
+            option.value =
+                equipmentId;
+
+
+            option.textContent =
+                `${equipmentName} (${equipmentId})`;
+
+
+            select.appendChild(
+                option
+            );
+
         }
+    );
 
-
-        const equipmentName =
-            item.name ??
-            item.equipment_name ??
-            equipmentId;
-
-
-        const option =
-            document.createElement("option");
-
-
-        option.value =
-            equipmentId;
-
-
-        option.textContent =
-            `${equipmentName} (${equipmentId})`;
-
-
-        select.appendChild(option);
-
-    });
-
-
-    // Restore previous selection if it still exists.
 
     if (
-        currentValue &&
+        previousValue &&
         [...select.options].some(
             option =>
-                option.value === currentValue
+                option.value ===
+                previousValue
         )
     ) {
 
         select.value =
-            currentValue;
+            previousValue;
 
     }
 
@@ -7132,7 +6366,8 @@ function populateReliabilitySelector(
 
 
 // ==========================================================
-// LOAD SELECTED EQUIPMENT RELIABILITY
+// v3.5.3
+// SELECTED RELIABILITY
 // ==========================================================
 
 async function loadSelectedReliability() {
@@ -7160,9 +6395,13 @@ async function loadSelectedReliability() {
     if (!equipmentId) {
 
         result.innerHTML = `
-            <p>
+
+            <div class="info">
+
                 Select equipment to view reliability.
-            </p>
+
+            </div>
+
         `;
 
         return;
@@ -7170,30 +6409,31 @@ async function loadSelectedReliability() {
     }
 
 
-    // ------------------------------------------------------
-    // FIND EQUIPMENT FROM ALREADY-LOADED DATA
-    // ------------------------------------------------------
-
     const item =
         reliabilityData.find(
             equipment =>
                 String(
                     equipment.equipment_id ??
                     equipment.id
-                ) === String(equipmentId)
+                ) ===
+                String(equipmentId)
         );
 
 
     if (!item) {
 
         result.innerHTML = `
+
             <div class="error">
+
                 Reliability data for
-                ${escapeHtml(equipmentId)}
+                ${escapeHtml(
+                    equipmentId
+                )}
                 was not found.
-                <br>
-                Refresh Reliability and try again.
+
             </div>
+
         `;
 
         return;
@@ -7210,7 +6450,8 @@ async function loadSelectedReliability() {
 
 
 // ==========================================================
-// RENDER SELECTED EQUIPMENT RELIABILITY
+// v3.5.3
+// RENDER SELECTED RELIABILITY
 // ==========================================================
 
 function renderSelectedReliability(
@@ -7219,10 +6460,10 @@ function renderSelectedReliability(
 ) {
 
     const score =
-        getReliabilityScore(item);
+        intelligenceGetReliabilityScore(item);
 
     const status =
-        getReliabilityStatus(item);
+        intelligenceGetReliabilityStatus(item);
 
     const equipmentId =
         item.equipment_id ??
@@ -7252,6 +6493,7 @@ function renderSelectedReliability(
 
     const repairCount =
         item.repair_count ??
+        item.total_repairs ??
         item.repairs ??
         0;
 
@@ -7273,19 +6515,21 @@ function renderSelectedReliability(
 
             <div class="reliability-detail-card">
 
-                <h4>
-                    Equipment
-                </h4>
+                <h4>Equipment</h4>
 
                 <p>
                     ${escapeHtml(
-                        equipmentName
+                        String(
+                            equipmentName
+                        )
                     )}
                 </p>
 
                 <small>
                     ${escapeHtml(
-                        equipmentId
+                        String(
+                            equipmentId
+                        )
                     )}
                 </small>
 
@@ -7294,14 +6538,18 @@ function renderSelectedReliability(
 
             <div class="reliability-detail-card">
 
-                <h4>
-                    Reliability Score
-                </h4>
+                <h4>Reliability Score</h4>
 
                 <p
-                    class="${getReliabilityClass(score)}"
+                    class="${intelligenceGetReliabilityClass(
+                        score
+                    )}"
                 >
-                    ${score.toFixed(1)}%
+
+                    ${intelligenceFormatNumber(
+                        score
+                    )}%
+
                 </p>
 
             </div>
@@ -7309,52 +6557,11 @@ function renderSelectedReliability(
 
             <div class="reliability-detail-card">
 
-                <h4>
-                    Reliability Status
-                </h4>
-
-                <p>
-                    ${escapeHtml(status)}
-                </p>
-
-            </div>
-
-
-            <div class="reliability-detail-card">
-
-                <h4>
-                    MTBF
-                </h4>
-
-                <p>
-                    ${escapeHtml(mtbf)}
-                </p>
-
-            </div>
-
-
-            <div class="reliability-detail-card">
-
-                <h4>
-                    MTTR
-                </h4>
-
-                <p>
-                    ${escapeHtml(mttr)}
-                </p>
-
-            </div>
-
-
-            <div class="reliability-detail-card">
-
-                <h4>
-                    Failure Frequency
-                </h4>
+                <h4>Reliability Status</h4>
 
                 <p>
                     ${escapeHtml(
-                        failureFrequency
+                        String(status)
                     )}
                 </p>
 
@@ -7363,13 +6570,11 @@ function renderSelectedReliability(
 
             <div class="reliability-detail-card">
 
-                <h4>
-                    Repair Count
-                </h4>
+                <h4>MTBF</h4>
 
                 <p>
                     ${escapeHtml(
-                        repairCount
+                        String(mtbf)
                     )}
                 </p>
 
@@ -7378,13 +6583,56 @@ function renderSelectedReliability(
 
             <div class="reliability-detail-card">
 
-                <h4>
-                    Maintenance Count
-                </h4>
+                <h4>MTTR</h4>
 
                 <p>
                     ${escapeHtml(
-                        maintenanceCount
+                        String(mttr)
+                    )}
+                </p>
+
+            </div>
+
+
+            <div class="reliability-detail-card">
+
+                <h4>Failure Frequency</h4>
+
+                <p>
+                    ${escapeHtml(
+                        String(
+                            failureFrequency
+                        )
+                    )}
+                </p>
+
+            </div>
+
+
+            <div class="reliability-detail-card">
+
+                <h4>Repair Count</h4>
+
+                <p>
+                    ${escapeHtml(
+                        String(
+                            repairCount
+                        )
+                    )}
+                </p>
+
+            </div>
+
+
+            <div class="reliability-detail-card">
+
+                <h4>Maintenance Count</h4>
+
+                <p>
+                    ${escapeHtml(
+                        String(
+                            maintenanceCount
+                        )
                     )}
                 </p>
 
@@ -7401,7 +6649,9 @@ function renderSelectedReliability(
 
             <p>
                 ${escapeHtml(
-                    recommendation
+                    String(
+                        recommendation
+                    )
                 )}
             </p>
 
@@ -7413,47 +6663,8 @@ function renderSelectedReliability(
 
 
 // ==========================================================
-// RELIABILITY SELECTOR CHANGE
-// ==========================================================
-
-function handleReliabilityEquipmentChange() {
-
-    const select =
-        document.getElementById(
-            "reliability-equipment-select"
-        );
-
-    const result =
-        document.getElementById(
-            "reliability-detail-result"
-        );
-
-
-    if (!select || !result) {
-        return;
-    }
-
-
-    if (!select.value) {
-
-        result.innerHTML = `
-            <p>
-                Select equipment to view reliability.
-            </p>
-        `;
-
-        return;
-
-    }
-
-
-    loadSelectedReliability();
-
-}
-
-
-// ==========================================================
-// INITIALIZE RELIABILITY MODULE
+// v3.5.3
+// RELIABILITY INITIALIZATION
 // ==========================================================
 
 function initializeReliabilityAnalytics() {
@@ -7464,50 +6675,20 @@ function initializeReliabilityAnalytics() {
         );
 
 
-    if (select) {
-
-        // Prevent duplicate listeners.
-
-        select.removeEventListener(
-            "change",
-            handleReliabilityEquipmentChange
-        );
-
-        select.addEventListener(
-            "change",
-            handleReliabilityEquipmentChange
-        );
-
+    if (!select) {
+        return;
     }
 
-}
 
-// ==========================================================
-// v3.5.4 — HEALTH & RISK INTELLIGENCE
-// ==========================================================
-
-async function refreshHealthRiskIntelligence() {
-
-    console.log(
-        "Refreshing Health & Risk Intelligence..."
-    );
-
-    await Promise.allSettled([
-
-        loadHealthRiskSummary(),
-
-        loadEquipmentRiskRanking(),
-
-        loadDeterioratingEquipment(),
-
-        loadHealthTrendEquipmentSelector()
-
-    ]);
+    select.onchange =
+        loadSelectedReliability;
 
 }
 
+
 // ==========================================================
-// v3.5.4 — HEALTH & RISK SUMMARY
+// v3.5.4
+// HEALTH & RISK SUMMARY
 // ==========================================================
 
 async function loadHealthRiskSummary() {
@@ -7517,9 +6698,22 @@ async function loadHealthRiskSummary() {
             "health-risk-summary"
         );
 
+
     if (!container) {
         return;
     }
+
+
+    container.innerHTML = `
+
+        <div class="info">
+
+            Loading Health & Risk Intelligence...
+
+        </div>
+
+    `;
+
 
     try {
 
@@ -7528,14 +6722,41 @@ async function loadHealthRiskSummary() {
                 `${API_URL}/health-risk-summary`
             );
 
+
         if (!response.ok) {
+
             throw new Error(
                 `Health risk summary failed: ${response.status}`
             );
+
         }
+
 
         const data =
             await response.json();
+
+
+        console.log(
+            "✅ v3.5.4 Health Risk Summary:",
+            data
+        );
+
+
+        const totalEquipment =
+            data.total_equipment ??
+            data.total ??
+            0;
+
+        const averageHealth =
+            data.average_health_score ??
+            data.average_health ??
+            0;
+
+        const averageRisk =
+            data.average_risk_score ??
+            data.average_risk ??
+            0;
+
 
         container.innerHTML = `
 
@@ -7543,45 +6764,52 @@ async function loadHealthRiskSummary() {
 
                 <div class="card">
 
-                    <h3>Total Equipment</h3>
+                    <h3>
+                        Total Equipment
+                    </h3>
 
                     <p>
-                        ${data.total_equipment ?? 0}
+                        ${totalEquipment}
                     </p>
 
                 </div>
 
+
                 <div class="card">
 
-                    <h3>Average Health</h3>
+                    <h3>
+                        Average Health
+                    </h3>
 
                     <p>
-                        ${
-                            data.average_health_score !== undefined
-                            ? `${formatNumber(data.average_health_score)}%`
-                            : "--"
-                        }
+                        ${intelligenceFormatNumber(
+                            averageHealth
+                        )}%
                     </p>
 
                 </div>
 
+
                 <div class="card">
 
-                    <h3>Average Risk</h3>
+                    <h3>
+                        Average Risk
+                    </h3>
 
                     <p>
-                        ${
-                            data.average_risk_score !== undefined
-                            ? `${formatNumber(data.average_risk_score)}%`
-                            : "--"
-                        }
+                        ${intelligenceFormatNumber(
+                            averageRisk
+                        )}%
                     </p>
 
                 </div>
 
+
                 <div class="card">
 
-                    <h3>Low Risk</h3>
+                    <h3>
+                        Low Risk
+                    </h3>
 
                     <p>
                         ${data.low_risk ?? 0}
@@ -7589,9 +6817,12 @@ async function loadHealthRiskSummary() {
 
                 </div>
 
+
                 <div class="card">
 
-                    <h3>Medium Risk</h3>
+                    <h3>
+                        Medium Risk
+                    </h3>
 
                     <p>
                         ${data.medium_risk ?? 0}
@@ -7599,9 +6830,12 @@ async function loadHealthRiskSummary() {
 
                 </div>
 
+
                 <div class="card">
 
-                    <h3>High Risk</h3>
+                    <h3>
+                        High Risk
+                    </h3>
 
                     <p>
                         ${data.high_risk ?? 0}
@@ -7609,7 +6843,77 @@ async function loadHealthRiskSummary() {
 
                 </div>
 
+
+                <div class="card">
+
+                    <h3>
+                        Critical Risk
+                    </h3>
+
+                    <p>
+                        ${
+                            data.critical_risk ??
+                            data.critical_risk_equipment ??
+                            0
+                        }
+                    </p>
+
+                </div>
+
+
+                <div class="card">
+
+                    <h3>
+                        Healthy Equipment
+                    </h3>
+
+                    <p>
+                        ${
+                            data.healthy_equipment ??
+                            data.healthy ??
+                            0
+                        }
+                    </p>
+
+                </div>
+
+
+                <div class="card">
+
+                    <h3>
+                        Deteriorating
+                    </h3>
+
+                    <p>
+                        ${
+                            data.deteriorating ??
+                            data.deteriorating_equipment ??
+                            0
+                        }
+                    </p>
+
+                </div>
+
             </div>
+
+
+            <details>
+
+                <summary>
+                    View health & risk data
+                </summary>
+
+                <pre>
+${escapeHtml(
+    JSON.stringify(
+        data,
+        null,
+        2
+    )
+)}
+                </pre>
+
+            </details>
 
         `;
 
@@ -7618,19 +6922,22 @@ async function loadHealthRiskSummary() {
     catch (error) {
 
         console.error(
-            "Health risk summary error:",
+            "Health Risk Summary Error:",
             error
         );
+
 
         container.innerHTML = `
 
             <div class="error">
 
-                ❌ Health & Risk Summary unavailable.
+                ❌ Unable to load Health & Risk Summary.
 
-                <br>
+                <br><br>
 
-                ${escapeHtml(error.message)}
+                ${escapeHtml(
+                    error.message
+                )}
 
             </div>
 
@@ -7642,7 +6949,8 @@ async function loadHealthRiskSummary() {
 
 
 // ==========================================================
-// v3.5.4 — RISK RANKING
+// v3.5.4
+// EQUIPMENT RISK RANKING
 // ==========================================================
 
 async function loadEquipmentRiskRanking() {
@@ -7659,9 +6967,11 @@ async function loadEquipmentRiskRanking() {
 
     ].filter(Boolean);
 
+
     if (!containers.length) {
         return;
     }
+
 
     try {
 
@@ -7670,122 +6980,221 @@ async function loadEquipmentRiskRanking() {
                 `${API_URL}/health-risk-ranking`
             );
 
+
         if (!response.ok) {
+
             throw new Error(
                 `Risk ranking failed: ${response.status}`
             );
+
         }
+
 
         const data =
             await response.json();
 
+
+        console.log(
+            "✅ v3.5.4 Health Risk Ranking:",
+            data
+        );
+
+
         const ranking =
-            data.ranking ||
-            data.equipment ||
-            data.results ||
-            [];
+            Array.isArray(data)
+                ? data
+                : (
+                    data.ranking ??
+                    data.equipment ??
+                    data.results ??
+                    []
+                );
 
-        let html = "";
 
-        if (!ranking.length) {
+        if (
+            !Array.isArray(ranking) ||
+            ranking.length === 0
+        ) {
 
-            html =
-                `<div class="info">
+            const emptyHtml = `
+
+                <div class="info">
+
                     No equipment risk data available.
-                </div>`;
-
-        }
-        else {
-
-            html = `
-
-                <div class="table-container">
-
-                    <table>
-
-                        <thead>
-
-                            <tr>
-
-                                <th>Rank</th>
-                                <th>Equipment</th>
-                                <th>Health</th>
-                                <th>Risk</th>
-                                <th>Status</th>
-
-                            </tr>
-
-                        </thead>
-
-                        <tbody>
-
-                            ${ranking.map(
-                                (item, index) => {
-
-                                    return `
-
-                                        <tr>
-
-                                            <td>
-                                                ${index + 1}
-                                            </td>
-
-                                            <td>
-                                                <strong>
-                                                    ${escapeHtml(
-                                                        item.equipment_id ??
-                                                        item.id ??
-                                                        "Unknown"
-                                                    )}
-                                                </strong>
-                                            </td>
-
-                                            <td>
-                                                ${
-                                                    item.health_score !== undefined
-                                                    ? `${formatNumber(item.health_score)}%`
-                                                    : "--"
-                                                }
-                                            </td>
-
-                                            <td>
-                                                ${
-                                                    item.risk_score !== undefined
-                                                    ? `${formatNumber(item.risk_score)}%`
-                                                    : "--"
-                                                }
-                                            </td>
-
-                                            <td>
-                                                <span class="badge">
-                                                    ${escapeHtml(
-                                                        item.risk_level ??
-                                                        item.status ??
-                                                        "Unknown"
-                                                    )}
-                                                </span>
-                                            </td>
-
-                                        </tr>
-
-                                    `;
-
-                                }
-                            ).join("")}
-
-                        </tbody>
-
-                    </table>
 
                 </div>
 
             `;
 
+
+            containers.forEach(
+                container => {
+                    container.innerHTML =
+                        emptyHtml;
+                }
+            );
+
+
+            return;
+
         }
+
+
+        const html = `
+
+            <div class="table-container">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Rank</th>
+                            <th>Equipment</th>
+                            <th>Health</th>
+                            <th>Risk</th>
+                            <th>Status</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        ${ranking.map(
+                            (item, index) => {
+
+                                const equipmentId =
+                                    item.equipment_id ??
+                                    item.id ??
+                                    "Unknown";
+
+                                const equipmentName =
+                                    item.equipment_name ??
+                                    item.name ??
+                                    equipmentId;
+
+                                const healthScore =
+                                    item.health_score ??
+                                    item.health;
+
+                                const riskScore =
+                                    item.risk_score ??
+                                    item.risk;
+
+                                const riskLevel =
+                                    item.risk_level ??
+                                    item.status ??
+                                    "Unknown";
+
+
+                                return `
+
+                                    <tr>
+
+                                        <td>
+                                            <strong>
+                                                #${index + 1}
+                                            </strong>
+                                        </td>
+
+
+                                        <td>
+
+                                            <strong>
+                                                ${escapeHtml(
+                                                    String(
+                                                        equipmentName
+                                                    )
+                                                )}
+                                            </strong>
+
+                                            <br>
+
+                                            <small>
+                                                ${escapeHtml(
+                                                    String(
+                                                        equipmentId
+                                                    )
+                                                )}
+                                            </small>
+
+                                        </td>
+
+
+                                        <td>
+
+                                            ${
+                                                healthScore !==
+                                                undefined &&
+                                                healthScore !==
+                                                null
+
+                                                    ? `${intelligenceFormatNumber(
+                                                        healthScore
+                                                    )}%`
+
+                                                    : "--"
+                                            }
+
+                                        </td>
+
+
+                                        <td>
+
+                                            ${
+                                                riskScore !==
+                                                undefined &&
+                                                riskScore !==
+                                                null
+
+                                                    ? `${intelligenceFormatNumber(
+                                                        riskScore
+                                                    )}%`
+
+                                                    : "--"
+                                            }
+
+                                        </td>
+
+
+                                        <td>
+
+                                            <span class="badge">
+
+                                                ${escapeHtml(
+                                                    String(
+                                                        riskLevel
+                                                    )
+                                                )}
+
+                                            </span>
+
+                                        </td>
+
+                                    </tr>
+
+                                `;
+
+                            }
+                        ).join("")}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        `;
+
 
         containers.forEach(
             container => {
-                container.innerHTML = html;
+
+                container.innerHTML =
+                    html;
+
             }
         );
 
@@ -7798,6 +7207,7 @@ async function loadEquipmentRiskRanking() {
             error
         );
 
+
         containers.forEach(
             container => {
 
@@ -7807,9 +7217,11 @@ async function loadEquipmentRiskRanking() {
 
                         ❌ Unable to load equipment risk ranking.
 
-                        <br>
+                        <br><br>
 
-                        ${escapeHtml(error.message)}
+                        ${escapeHtml(
+                            error.message
+                        )}
 
                     </div>
 
@@ -7824,7 +7236,8 @@ async function loadEquipmentRiskRanking() {
 
 
 // ==========================================================
-// v3.5.4 — DETERIORATING EQUIPMENT
+// v3.5.4
+// DETERIORATING EQUIPMENT
 // ==========================================================
 
 async function loadDeterioratingEquipment() {
@@ -7841,9 +7254,11 @@ async function loadDeterioratingEquipment() {
 
     ].filter(Boolean);
 
+
     if (!containers.length) {
         return;
     }
+
 
     try {
 
@@ -7852,94 +7267,203 @@ async function loadDeterioratingEquipment() {
                 `${API_URL}/health-risk-deteriorating`
             );
 
+
         if (!response.ok) {
+
             throw new Error(
                 `Deteriorating equipment request failed: ${response.status}`
             );
+
         }
+
 
         const data =
             await response.json();
 
+
+        console.log(
+            "✅ v3.5.4 Deteriorating Equipment:",
+            data
+        );
+
+
         const equipment =
-            data.equipment ||
-            data.results ||
-            data.deteriorating ||
-            [];
+            Array.isArray(data)
+                ? data
+                : (
+                    data.equipment ??
+                    data.deteriorating ??
+                    data.results ??
+                    data.deteriorating_equipment ??
+                    []
+                );
 
-        if (!equipment.length) {
 
-            containers.forEach(
-                container => {
+        if (
+            !Array.isArray(equipment) ||
+            equipment.length === 0
+        ) {
 
-                    container.innerHTML =
-                        `<div class="success">
-                            ✅ No deteriorating equipment detected.
-                        </div>`;
+            const successHtml = `
 
-                }
-            );
+                <div class="success">
 
-            return;
-        }
-
-        const html = equipment.map(
-            item => `
-
-                <div class="maintenance-alert-card">
-
-                    <h4>
-                        ⚠️ ${escapeHtml(
-                            item.equipment_id ??
-                            item.id ??
-                            "Unknown Equipment"
-                        )}
-                    </h4>
-
-                    ${
-                        item.name
-                        ? `<p>
-                            <strong>Name:</strong>
-                            ${escapeHtml(item.name)}
-                           </p>`
-                        : ""
-                    }
-
-                    ${
-                        item.health_score !== undefined
-                        ? `<p>
-                            <strong>Health:</strong>
-                            ${formatNumber(item.health_score)}%
-                           </p>`
-                        : ""
-                    }
-
-                    ${
-                        item.risk_score !== undefined
-                        ? `<p>
-                            <strong>Risk:</strong>
-                            ${formatNumber(item.risk_score)}%
-                           </p>`
-                        : ""
-                    }
-
-                    ${
-                        item.trend
-                        ? `<p>
-                            <strong>Trend:</strong>
-                            ${escapeHtml(item.trend)}
-                           </p>`
-                        : ""
-                    }
+                    ✅ No deteriorating equipment detected.
 
                 </div>
 
-            `
-        ).join("");
+            `;
+
+
+            containers.forEach(
+                container => {
+                    container.innerHTML =
+                        successHtml;
+                }
+            );
+
+
+            return;
+
+        }
+
+
+        const html =
+            equipment.map(
+                item => {
+
+                    const equipmentId =
+                        item.equipment_id ??
+                        item.id ??
+                        "Unknown Equipment";
+
+                    const name =
+                        item.name ??
+                        item.equipment_name;
+
+                    const health =
+                        item.health_score ??
+                        item.health;
+
+                    const risk =
+                        item.risk_score ??
+                        item.risk;
+
+                    const trend =
+                        item.trend ??
+                        item.health_trend ??
+                        "Deteriorating";
+
+
+                    return `
+
+                        <div class="maintenance-alert-card">
+
+                            <h4>
+
+                                ⚠️
+                                ${escapeHtml(
+                                    String(
+                                        equipmentId
+                                    )
+                                )}
+
+                            </h4>
+
+
+                            ${
+                                name
+                                    ? `
+                                        <p>
+
+                                            <strong>
+                                                Name:
+                                            </strong>
+
+                                            ${escapeHtml(
+                                                String(name)
+                                            )}
+
+                                        </p>
+                                    `
+                                    : ""
+                            }
+
+
+                            ${
+                                health !==
+                                undefined &&
+                                health !==
+                                null
+
+                                    ? `
+                                        <p>
+
+                                            <strong>
+                                                Health:
+                                            </strong>
+
+                                            ${intelligenceFormatNumber(
+                                                health
+                                            )}%
+
+                                        </p>
+                                    `
+                                    : ""
+                            }
+
+
+                            ${
+                                risk !==
+                                undefined &&
+                                risk !==
+                                null
+
+                                    ? `
+                                        <p>
+
+                                            <strong>
+                                                Risk:
+                                            </strong>
+
+                                            ${intelligenceFormatNumber(
+                                                risk
+                                            )}%
+
+                                        </p>
+                                    `
+                                    : ""
+                            }
+
+
+                            <p>
+
+                                <strong>
+                                    Trend:
+                                </strong>
+
+                                ${escapeHtml(
+                                    String(
+                                        trend
+                                    )
+                                )}
+
+                            </p>
+
+                        </div>
+
+                    `;
+
+                }
+            ).join("");
+
 
         containers.forEach(
             container => {
-                container.innerHTML = html;
+
+                container.innerHTML =
+                    html;
+
             }
         );
 
@@ -7952,6 +7476,7 @@ async function loadDeterioratingEquipment() {
             error
         );
 
+
         containers.forEach(
             container => {
 
@@ -7961,9 +7486,11 @@ async function loadDeterioratingEquipment() {
 
                         ❌ Unable to load deteriorating equipment.
 
-                        <br>
+                        <br><br>
 
-                        ${escapeHtml(error.message)}
+                        ${escapeHtml(
+                            error.message
+                        )}
 
                     </div>
 
@@ -7976,20 +7503,37 @@ async function loadDeterioratingEquipment() {
 
 }
 
+
 // ==========================================================
-// v3.5.4 — HEALTH TREND EQUIPMENT SELECTOR
+// v3.5.4
+// HEALTH EQUIPMENT SELECTOR
+//
+// IMPORTANT:
+// Your actual HTML uses:
+//
+// <select id="equipment-health-select">
+//
+// Therefore this function uses THAT ID.
 // ==========================================================
 
 async function loadHealthTrendEquipmentSelector() {
 
-    const selector =
+        const selector =
         document.getElementById(
-            "health-trend-equipment"
+            "health-risk-equipment-select"
         );
 
+
     if (!selector) {
+
+        console.warn(
+            "⚠️ equipment-health-select not found."
+        );
+
         return;
+
     }
+
 
     try {
 
@@ -7997,6 +7541,7 @@ async function loadHealthTrendEquipmentSelector() {
             await fetch(
                 `${API_URL}/equipment`
             );
+
 
         if (!response.ok) {
 
@@ -8006,28 +7551,66 @@ async function loadHealthTrendEquipmentSelector() {
 
         }
 
-        const equipment =
+
+        const data =
             await response.json();
 
+
+        const equipment =
+            Array.isArray(data)
+                ? data
+                : (
+                    data.equipment ??
+                    data.results ??
+                    []
+                );
+
+
+        const previousValue =
+            selector.value;
+
+
         selector.innerHTML = `
+
             <option value="">
                 Select Equipment
             </option>
+
         `;
+
 
         equipment.forEach(
             item => {
+
+                const equipmentId =
+                    item.equipment_id ??
+                    item.id;
+
+
+                if (!equipmentId) {
+                    return;
+                }
+
+
+                const equipmentName =
+                    item.name ??
+                    item.equipment_name ??
+                    equipmentId;
+
 
                 const option =
                     document.createElement(
                         "option"
                     );
 
+
                 option.value =
-                    item.equipment_id;
+                    equipmentId;
+
 
                 option.textContent =
-                    `${item.equipment_id} — ${item.name}`;
+                    `${equipmentName} (${equipmentId})`;
+
 
                 selector.appendChild(
                     option
@@ -8036,21 +7619,43 @@ async function loadHealthTrendEquipmentSelector() {
             }
         );
 
-        // --------------------------------------------------
-        // LOAD HISTORICAL CONDITION WHEN EQUIPMENT IS SELECTED
-        // --------------------------------------------------
 
-        selector.onchange =
-            loadEquipmentTrend;
+        if (
+            previousValue &&
+            [...selector.options].some(
+                option =>
+                    option.value ===
+                    previousValue
+            )
+        ) {
+
+            selector.value =
+                previousValue;
+
+        }
+
+
+        console.log(
+            "✅ Health equipment selector populated."
+        );
 
     }
 
     catch (error) {
 
         console.error(
-            "Health trend selector error:",
+            "Health equipment selector error:",
             error
         );
+
+
+        selector.innerHTML = `
+
+            <option value="">
+                Unable to load equipment
+            </option>
+
+        `;
 
     }
 
@@ -8058,50 +7663,219 @@ async function loadHealthTrendEquipmentSelector() {
 
 
 // ==========================================================
-// v3.5.4 — HISTORICAL EQUIPMENT CONDITION INTELLIGENCE
+// v3.5.4
+// HEALTH TREND ANALYZE BUTTON
+//
+// This creates the button automatically after the existing
+// equipment-health-select selector.
+//
+// Result:
+// [ Select Equipment ]
+// [ 📈 Analyze Health Trend ]
 // ==========================================================
 
-async function loadEquipmentTrend() {
+function initializeHealthTrendAnalyzeButton() {
 
     const selector =
         document.getElementById(
-            "health-trend-equipment"
+            "equipment-health-select"
         );
 
-    const result =
+
+    if (!selector) {
+
+        console.warn(
+            "⚠️ Health selector not found."
+        );
+
+        return;
+
+    }
+
+
+    let button =
+    document.getElementById(
+        "analyze-health-trend-btn"
+    );
+
+
+    if (!button) {
+
+        button =
+            document.createElement(
+                "button"
+            );
+
+
+        button.id =
+            "analyze-health-trend-button";
+
+
+        button.type =
+            "button";
+
+
+        button.textContent =
+            "📈 Analyze Health Trend";
+
+
+        button.style.marginTop =
+            "10px";
+
+
+        button.style.cursor =
+            "pointer";
+
+
+        selector.insertAdjacentElement(
+            "afterend",
+            button
+        );
+
+    }
+
+
+    button.onclick =
+        loadEquipmentHealthTrend;
+
+
+    console.log(
+        "✅ Analyze Health Trend button initialized."
+    );
+
+}
+
+
+// ==========================================================
+// v3.5.4
+// HEALTH TREND RESULT CONTAINER
+// ==========================================================
+
+function ensureHealthTrendResultContainer() {
+
+    const existing =
         document.getElementById(
             "health-trend-result"
         );
 
-    if (!selector || !result) {
-        return;
+
+    if (existing) {
+        return existing;
     }
+
+
+    const selector =
+        document.getElementById(
+            "equipment-health-select"
+        );
+
+
+    if (!selector) {
+        return null;
+    }
+
+
+    const result =
+        document.createElement(
+            "div"
+        );
+
+
+    result.id =
+        "health-trend-result";
+
+
+    result.style.marginTop =
+        "20px";
+
+
+    result.innerHTML = `
+
+        <div class="info">
+
+            Select equipment to view health trend.
+
+        </div>
+
+    `;
+
+
+    selector.parentNode.appendChild(
+        result
+    );
+
+
+    return result;
+
+}
+
+
+// ==========================================================
+// v3.5.4
+// LOAD SELECTED EQUIPMENT HEALTH TREND
+// ==========================================================
+
+async function loadEquipmentHealthTrend() {
+
+    const selector =
+        document.getElementById(
+            "equipment-health-select"
+        );
+
+
+    const result =
+        ensureHealthTrendResultContainer();
+
+
+    if (!selector || !result) {
+
+        console.warn(
+            "⚠️ Health trend selector/result unavailable."
+        );
+
+        return;
+
+    }
+
 
     const equipmentId =
         selector.value;
 
+
     if (!equipmentId) {
 
         result.innerHTML = `
+
             <div class="info">
-                Select equipment to view its historical condition.
+
+                Select equipment to view health trend.
+
             </div>
+
         `;
 
         return;
+
     }
 
+
     result.innerHTML = `
+
         <div class="info">
-            Loading historical equipment condition...
+
+            📈 Loading health trend for
+            <strong>
+                ${escapeHtml(
+                    equipmentId
+                )}
+            </strong>...
+
         </div>
+
     `;
 
-    try {
 
-        // --------------------------------------------------
-        // V3.5.4 HISTORICAL HEALTH-RISK ENDPOINT
-        // --------------------------------------------------
+    try {
 
         const response =
             await fetch(
@@ -8110,21 +7884,58 @@ async function loadEquipmentTrend() {
                 )}?months=3`
             );
 
+
         if (!response.ok) {
 
+            const errorData =
+                await response
+                    .json()
+                    .catch(
+                        () => ({})
+                    );
+
+
             throw new Error(
-                `Historical health request failed: ${response.status}`
+                errorData.detail ??
+                `Health trend request failed: ${response.status}`
             );
 
         }
 
+
         const data =
             await response.json();
 
+
         console.log(
-            "Equipment Historical Health Intelligence:",
+            "✅ v3.5.4 Equipment Health Trend:",
             data
         );
+
+
+        // --------------------------------------------------
+        // CURRENT VALUES
+        // --------------------------------------------------
+
+        const currentHealth =
+            data.current_health_score ??
+            data.health_score ??
+            data.current_health;
+
+        const currentRisk =
+            data.current_risk_score ??
+            data.risk_score ??
+            data.current_risk;
+
+        const overallTrend =
+            data.overall_trend ??
+            data.trend ??
+            "Unknown";
+
+        const periodMonths =
+            data.period_months ??
+            3;
+
 
         // --------------------------------------------------
         // MONTHLY HISTORY
@@ -8137,13 +7948,11 @@ async function loadEquipmentTrend() {
                 ? data.monthly_history
                 : [];
 
-        // --------------------------------------------------
-        // MONTHLY HISTORY TABLE
-        // --------------------------------------------------
 
         let historyHtml = "";
 
-        if (monthlyHistory.length) {
+
+        if (monthlyHistory.length > 0) {
 
             historyHtml = `
 
@@ -8169,78 +7978,121 @@ async function loadEquipmentTrend() {
 
                         <tbody>
 
-                            ${
-                                monthlyHistory.map(
-                                    month => {
+                            ${monthlyHistory.map(
+                                month => {
 
-                                        return `
+                                    const health =
+                                        month.health_score ??
+                                        month.health;
 
-                                            <tr>
+                                    const risk =
+                                        month.risk_score ??
+                                        month.risk;
 
-                                                <td>
-                                                    <strong>
-                                                        ${escapeHtml(
+                                    const repairs =
+                                        month.repair_count ??
+                                        month.repairs ??
+                                        0;
+
+                                    const maintenance =
+                                        month.maintenance_count ??
+                                        month.maintenance ??
+                                        0;
+
+
+                                    return `
+
+                                        <tr>
+
+                                            <td>
+
+                                                <strong>
+                                                    ${escapeHtml(
+                                                        String(
                                                             month.month ??
                                                             "--"
-                                                        )}
-                                                    </strong>
-                                                </td>
+                                                        )
+                                                    )}
+                                                </strong>
 
-                                                <td>
-                                                    ${
-                                                        month.health_score !== undefined
-                                                        ? `${formatNumber(
-                                                            month.health_score
+                                            </td>
+
+
+                                            <td>
+
+                                                ${
+                                                    health !==
+                                                    undefined &&
+                                                    health !==
+                                                    null
+
+                                                        ? `${intelligenceFormatNumber(
+                                                            health
                                                         )}%`
-                                                        : "--"
-                                                    }
-                                                </td>
 
-                                                <td>
-                                                    ${
-                                                        month.risk_score !== undefined
-                                                        ? `${formatNumber(
-                                                            month.risk_score
+                                                        : "--"
+                                                }
+
+                                            </td>
+
+
+                                            <td>
+
+                                                ${
+                                                    risk !==
+                                                    undefined &&
+                                                    risk !==
+                                                    null
+
+                                                        ? `${intelligenceFormatNumber(
+                                                            risk
                                                         )}%`
-                                                        : "--"
-                                                    }
-                                                </td>
 
-                                                <td>
-                                                    ${escapeHtml(
+                                                        : "--"
+                                                }
+
+                                            </td>
+
+
+                                            <td>
+
+                                                ${escapeHtml(
+                                                    String(
                                                         month.condition ??
                                                         "Unknown"
-                                                    )}
-                                                </td>
+                                                    )
+                                                )}
 
-                                                <td>
-                                                    ${escapeHtml(
+                                            </td>
+
+
+                                            <td>
+
+                                                ${escapeHtml(
+                                                    String(
                                                         month.trend ??
                                                         "No Data"
-                                                    )}
-                                                </td>
+                                                    )
+                                                )}
 
-                                                <td>
-                                                    ${
-                                                        month.repair_count ??
-                                                        0
-                                                    }
-                                                </td>
+                                            </td>
 
-                                                <td>
-                                                    ${
-                                                        month.maintenance_count ??
-                                                        0
-                                                    }
-                                                </td>
 
-                                            </tr>
+                                            <td>
+                                                ${repairs}
+                                            </td>
 
-                                        `;
 
-                                    }
-                                ).join("")
-                            }
+                                            <td>
+                                                ${maintenance}
+                                            </td>
+
+                                        </tr>
+
+                                    `;
+
+                                }
+                            ).join("")}
 
                         </tbody>
 
@@ -8255,12 +8107,18 @@ async function loadEquipmentTrend() {
         else {
 
             historyHtml = `
+
                 <div class="info">
-                    No monthly history available.
+
+                    No monthly historical data available
+                    for this equipment yet.
+
                 </div>
+
             `;
 
         }
+
 
         // --------------------------------------------------
         // IMMEDIATE ACTIONS
@@ -8273,32 +8131,40 @@ async function loadEquipmentTrend() {
                 ? data.immediate_actions
                 : [];
 
+
         const immediateActionsHtml =
-            immediateActions.length
+            immediateActions.length > 0
 
                 ? `
+
                     <ul>
 
-                        ${
-                            immediateActions.map(
-                                action => `
-                                    <li>
-                                        ${escapeHtml(
+                        ${immediateActions.map(
+                            action => `
+
+                                <li>
+                                    ${escapeHtml(
+                                        String(
                                             action
-                                        )}
-                                    </li>
-                                `
-                            ).join("")
-                        }
+                                        )
+                                    )}
+                                </li>
+
+                            `
+                        ).join("")}
 
                     </ul>
+
                 `
 
                 : `
+
                     <p>
                         No immediate actions identified.
                     </p>
+
                 `;
+
 
         // --------------------------------------------------
         // RECOMMENDATIONS
@@ -8311,35 +8177,43 @@ async function loadEquipmentTrend() {
                 ? data.recommendations
                 : [];
 
+
         const recommendationsHtml =
-            recommendations.length
+            recommendations.length > 0
 
                 ? `
+
                     <ul>
 
-                        ${
-                            recommendations.map(
-                                recommendation => `
-                                    <li>
-                                        ${escapeHtml(
+                        ${recommendations.map(
+                            recommendation => `
+
+                                <li>
+                                    ${escapeHtml(
+                                        String(
                                             recommendation
-                                        )}
-                                    </li>
-                                `
-                            ).join("")
-                        }
+                                        )
+                                    )}
+                                </li>
+
+                            `
+                        ).join("")}
 
                     </ul>
+
                 `
 
                 : `
+
                     <p>
                         No additional recommendations.
                     </p>
+
                 `;
 
+
         // --------------------------------------------------
-        // COMPLETE HISTORICAL INTELLIGENCE
+        // RENDER HEALTH TREND
         // --------------------------------------------------
 
         result.innerHTML = `
@@ -8349,19 +8223,28 @@ async function loadEquipmentTrend() {
                 <div class="card">
 
                     <h3>
-                        Current Health
+                        ❤️ Current Health
                     </h3>
 
                     <p>
+
                         <strong>
+
                             ${
-                                data.current_health_score !== undefined
-                                ? `${formatNumber(
-                                    data.current_health_score
-                                )}%`
-                                : "--"
+                                currentHealth !==
+                                undefined &&
+                                currentHealth !==
+                                null
+
+                                    ? `${intelligenceFormatNumber(
+                                        currentHealth
+                                    )}%`
+
+                                    : "--"
                             }
+
                         </strong>
+
                     </p>
 
                 </div>
@@ -8370,19 +8253,28 @@ async function loadEquipmentTrend() {
                 <div class="card">
 
                     <h3>
-                        Current Risk
+                        ⚠️ Current Risk
                     </h3>
 
                     <p>
+
                         <strong>
+
                             ${
-                                data.current_risk_score !== undefined
-                                ? `${formatNumber(
-                                    data.current_risk_score
-                                )}%`
-                                : "--"
+                                currentRisk !==
+                                undefined &&
+                                currentRisk !==
+                                null
+
+                                    ? `${intelligenceFormatNumber(
+                                        currentRisk
+                                    )}%`
+
+                                    : "--"
                             }
+
                         </strong>
+
                     </p>
 
                 </div>
@@ -8391,16 +8283,21 @@ async function loadEquipmentTrend() {
                 <div class="card">
 
                     <h3>
-                        Overall Trend
+                        📈 Overall Trend
                     </h3>
 
                     <p>
+
                         <strong>
+
                             ${escapeHtml(
-                                data.overall_trend ??
-                                "Unknown"
+                                String(
+                                    overallTrend
+                                )
                             )}
+
                         </strong>
+
                     </p>
 
                 </div>
@@ -8409,16 +8306,15 @@ async function loadEquipmentTrend() {
                 <div class="card">
 
                     <h3>
-                        Analysis Period
+                        📅 Analysis Period
                     </h3>
 
                     <p>
+
                         Last
-                        ${
-                            data.period_months ??
-                            3
-                        }
+                        ${periodMonths}
                         months
+
                     </p>
 
                 </div>
@@ -8433,10 +8329,14 @@ async function loadEquipmentTrend() {
                 </h3>
 
                 <p>
+
                     ${escapeHtml(
-                        data.overview ??
-                        "No historical overview available."
+                        String(
+                            data.overview ??
+                            "Historical equipment condition analysis generated by FuElectric-AI."
+                        )
                     )}
+
                 </p>
 
             </div>
@@ -8467,7 +8367,7 @@ async function loadEquipmentTrend() {
             <div class="card">
 
                 <h3>
-                    💡 FuElectric-AI Recommendations
+                    🤖 FuElectric-AI Recommendations
                 </h3>
 
                 ${recommendationsHtml}
@@ -8478,10 +8378,11 @@ async function loadEquipmentTrend() {
             <div class="card">
 
                 <h3>
-                    🔧 Activity Summary
+                    🔧 Equipment Activity
                 </h3>
 
                 <p>
+
                     <strong>
                         Total Repairs:
                     </strong>
@@ -8490,9 +8391,12 @@ async function loadEquipmentTrend() {
                         data.total_repairs ??
                         0
                     }
+
                 </p>
 
+
                 <p>
+
                     <strong>
                         Total Maintenance:
                     </strong>
@@ -8501,6 +8405,7 @@ async function loadEquipmentTrend() {
                         data.total_maintenance ??
                         0
                     }
+
                 </p>
 
             </div>
@@ -8512,15 +8417,16 @@ async function loadEquipmentTrend() {
     catch (error) {
 
         console.error(
-            "Historical equipment condition error:",
+            "Equipment Health Trend Error:",
             error
         );
+
 
         result.innerHTML = `
 
             <div class="error">
 
-                ❌ Unable to load historical equipment condition.
+                ❌ Unable to load equipment health trend.
 
                 <br><br>
 
@@ -8536,121 +8442,214 @@ async function loadEquipmentTrend() {
 
 }
 
-// ==========================================================
-// HELPERS
-// ==========================================================
-
-function setElementText(
-    id,
-    value
-) {
-
-    const element =
-        document.getElementById(id);
-
-    if (element) {
-        element.textContent = value;
-    }
-
-}
-
-
-function formatNumber(
-    value
-) {
-
-    const number =
-        Number(value);
-
-    return Number.isFinite(number)
-        ? number.toFixed(1)
-        : "0.0";
-
-}
-
-
-function getReliabilityStatus(
-    score
-) {
-
-    const value =
-        Number(score);
-
-    if (value >= 90) {
-        return "Highly Reliable";
-    }
-
-    if (value >= 75) {
-        return "Reliable";
-    }
-
-    if (value >= 50) {
-        return "Moderate";
-    }
-
-    return "Low Reliability";
-
-}
-
-
-function getHealthStatus(
-    score
-) {
-
-    const value =
-        Number(score);
-
-    if (value >= 90) {
-        return "Excellent";
-    }
-
-    if (value >= 75) {
-        return "Good";
-    }
-
-    if (value >= 50) {
-        return "Fair";
-    }
-
-    return "Poor";
-
-}
 
 // ==========================================================
-// START INTELLIGENCE LAYER
+// BACKWARD COMPATIBILITY
+// ==========================================================
+
+async function loadEquipmentTrend() {
+
+    return loadEquipmentHealthTrend();
+
+}
+
+
+// ==========================================================
+// v3.5.4
+// HEALTH TREND INITIALIZATION
+// ==========================================================
+
+function initializeHealthTrendSelector() {
+
+    const selector =
+        document.getElementById(
+            "equipment-health-select"
+        );
+
+
+    if (!selector) {
+
+        console.warn(
+            "⚠️ equipment-health-select not found."
+        );
+
+        return;
+
+    }
+
+
+    selector.onchange =
+        function () {
+
+            const result =
+                ensureHealthTrendResultContainer();
+
+
+            if (result) {
+
+                result.innerHTML = `
+
+                    <div class="info">
+
+                        Equipment selected:
+                        <strong>
+                            ${escapeHtml(
+                                selector.value
+                            )}
+                        </strong>
+
+                        <br><br>
+
+                        Click
+                        <strong>
+                            📈 Analyze Health Trend
+                        </strong>
+                        to generate the historical analysis.
+
+                    </div>
+
+                `;
+
+            }
+
+        };
+
+
+    initializeHealthTrendAnalyzeButton();
+
+
+    ensureHealthTrendResultContainer();
+
+
+    console.log(
+        "✅ v3.5.4 Health Trend initialized."
+    );
+
+}
+
+
+// ==========================================================
+// v3.5.4
+// LOAD ALL HEALTH & RISK INTELLIGENCE
+// ==========================================================
+
+async function loadHealthRiskIntelligence() {
+
+    console.log(
+        "🧠 Loading Health & Risk Intelligence..."
+    );
+
+
+    await Promise.allSettled([
+
+        loadHealthRiskSummary(),
+
+        loadEquipmentRiskRanking(),
+
+        loadDeterioratingEquipment(),
+
+        loadHealthTrendEquipmentSelector()
+
+    ]);
+
+    console.log(
+        "✅ Health & Risk Intelligence loaded."
+    );
+
+}
+
+
+// ==========================================================
+// v3.5.4
+// REFRESH HEALTH & RISK INTELLIGENCE
+// ==========================================================
+
+async function refreshHealthRiskIntelligence() {
+
+    console.log(
+        "🔄 Refreshing Health & Risk Intelligence..."
+    );
+
+
+    await loadHealthRiskIntelligence();
+
+
+    const selector =
+        document.getElementById(
+            "equipment-health-select"
+        );
+
+
+    if (
+        selector &&
+        selector.value
+    ) {
+
+        ensureHealthTrendResultContainer();
+
+    }
+
+
+    if (
+        typeof showMessage ===
+        "function"
+    ) {
+
+        showMessage(
+            "Health & Risk Intelligence refreshed successfully."
+        );
+
+    }
+
+
+    console.log(
+        "✅ Health & Risk Intelligence refreshed."
+    );
+
+}
+
+
+// ==========================================================
+// MASTER INTELLIGENCE INITIALIZATION
+// ==========================================================
+
+async function initializeReliabilityAndRiskIntelligence() {
+
+    console.log(
+        "🚀 FuElectric-AI v3.5.3 + v3.5.4 Intelligence initializing..."
+    );
+
+
+    await Promise.allSettled([
+
+        loadReliabilityAnalytics(),
+
+        loadHealthRiskIntelligence()
+
+    ]);
+
+    console.log(
+        "✅ FuElectric-AI v3.5.3 + v3.5.4 Intelligence ready."
+    );
+
+}
+
+
+// ==========================================================
+// DOM READY
 // ==========================================================
 
 document.addEventListener(
     "DOMContentLoaded",
-    () => {
+    function () {
 
         initializeReliabilityAndRiskIntelligence();
 
     }
 );
 
+
 // ==========================================================
-// v3.5.3 + v3.5.4 INITIALIZATION
+// END
+// FuElectric-AI v3.5.3 + v3.5.4
 // ==========================================================
-
-async function initializeReliabilityAndRiskIntelligence() {
-
-    console.log(
-        "FuElectric-AI v3.5.3/v3.5.4 Intelligence initializing..."
-    );
-
-    await Promise.allSettled([
-
-        loadReliabilityAnalytics(),
-
-        refreshHealthRiskIntelligence()
-
-    ]);
-
-    initializeReliabilityAnalytics();
-
-    console.log(
-        "FuElectric-AI v3.5.3/v3.5.4 Intelligence ready."
-    );
-
-}
