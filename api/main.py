@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from datetime import datetime
+import os
 
 from models.equipment import Equipment
 from models.diagnosis import DiagnosisRequest
@@ -171,7 +172,7 @@ migrate_database()
 
 app = FastAPI(
     title="FuElectric-AI",
-    version="3.5.0",
+    version="3.5.4",
     description="AI Equipment Diagnosis & Maintenance API",
 )
 
@@ -180,12 +181,18 @@ app = FastAPI(
 # CORS
 # ==========================================================
 
+allowed_origins = [
+    origin.strip()
+    for origin in os.getenv(
+        "FRONTEND_URLS",
+        "http://127.0.0.1:5500,http://localhost:5500"
+    ).split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://127.0.0.1:5500",
-        "http://localhost:5500",
-    ],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -199,7 +206,7 @@ app.add_middleware(
 @app.get("/")
 def home():
     return {
-        "message": "Welcome to FuElectric-AI 3.5.0"
+        "message": "Welcome to FuElectric-AI 3.5.4"
     }
 
 
