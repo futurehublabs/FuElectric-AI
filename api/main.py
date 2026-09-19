@@ -1,4 +1,6 @@
 from fastapi import FastAPI, HTTPException, Depends
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from datetime import datetime
@@ -199,15 +201,6 @@ app.add_middleware(
 )
 
 
-# ==========================================================
-# HOME
-# ==========================================================
-
-@app.get("/")
-def home():
-    return {
-        "message": "Welcome to FuElectric-AI 3.5.4"
-    }
 
 
 # ==========================================================
@@ -2521,6 +2514,21 @@ def get_equipment_health_history(
         "recommendations":
             recommendations
     }
+
+# ==========================================================
+# FRONTEND — serve dashboard on Railway
+# API routes are defined above; this catch-all mount is intentionally last.
+# ==========================================================
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+FRONTEND_DIR = BASE_DIR / "frontend"
+
+if FRONTEND_DIR.exists():
+    app.mount(
+        "/",
+        StaticFiles(directory=str(FRONTEND_DIR), html=True),
+        name="frontend"
+    )
 
 # ==========================================================
 # v3.5.4 — HEALTH & RISK HISTORY API
