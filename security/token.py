@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import os
 
 from jose import jwt
 from fastapi import Depends, HTTPException, status
@@ -9,7 +10,15 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 # JWT SETTINGS
 # ==========================================================
 
-SECRET_KEY = "CHANGE_THIS_TO_A_LONG_RANDOM_SECRET_KEY"
+SECRET_KEY = os.getenv(
+    "FUELECTRIC_SECRET_KEY",
+    "CHANGE_THIS_TO_A_LONG_RANDOM_SECRET_KEY"
+)
+
+if SECRET_KEY == "CHANGE_THIS_TO_A_LONG_RANDOM_SECRET_KEY" and os.getenv("RAILWAY_ENVIRONMENT"):
+    raise RuntimeError(
+        "FUELECTRIC_SECRET_KEY must be set in the deployment environment."
+    )
 
 ALGORITHM = "HS256"
 
