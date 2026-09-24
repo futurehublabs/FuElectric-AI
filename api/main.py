@@ -2516,21 +2516,6 @@ def get_equipment_health_history(
     }
 
 # ==========================================================
-# FRONTEND — serve dashboard on Railway
-# API routes are defined above; this catch-all mount is intentionally last.
-# ==========================================================
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-FRONTEND_DIR = BASE_DIR / "frontend"
-
-if FRONTEND_DIR.exists():
-    app.mount(
-        "/",
-        StaticFiles(directory=str(FRONTEND_DIR), html=True),
-        name="frontend"
-    )
-
-# ==========================================================
 # v3.5.4 — HEALTH & RISK HISTORY API
 # ==========================================================
 
@@ -2564,3 +2549,18 @@ def health_risk_history(
         )
 
     return history
+
+# ==========================================================
+# FRONTEND — serve dashboard on Railway
+# This catch-all mount must remain last so API routes are matched first.
+# ==========================================================
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+FRONTEND_DIR = BASE_DIR / "frontend"
+
+if FRONTEND_DIR.exists():
+    app.mount(
+        "/",
+        StaticFiles(directory=str(FRONTEND_DIR), html=True),
+        name="frontend"
+    )
