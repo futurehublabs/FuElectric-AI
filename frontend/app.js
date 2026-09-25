@@ -1,9 +1,8 @@
 const API_URL =
-  (window.location.hostname === "localhost" ||
-    window.location.hostname === "127.0.0.1"
-  )
-    ? "http://127.0.0.1:8000"
-    : window.location.origin;
+    (window.location.hostname === "localhost" ||
+     window.location.hostname === "127.0.0.1")
+        ? "http://127.0.0.1:8000"
+        : "https://fuelectric-ai-production-8559.up.railway.app";
 
 // ==========================================================
 // GLOBAL STATE
