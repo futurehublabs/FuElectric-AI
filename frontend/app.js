@@ -1,5 +1,9 @@
-const API_URL = "http://127.0.0.1:8000";
-
+const API_URL =
+  (window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1"
+  )
+    ? "http://127.0.0.1:8000"
+    : window.location.origin;
 
 // ==========================================================
 // GLOBAL STATE
@@ -3903,7 +3907,7 @@ async function loadEquipmentTrend() {
 
         const response =
             await fetch(
-                `${API_URL}/health-risk-history/${encodeURIComponent(
+                `${API_URL}/health-risk-trend/${encodeURIComponent(
                     equipmentId
                 )}?months=3`
             );
@@ -5627,7 +5631,7 @@ async function refreshHealthRiskIntelligence() {
 // GET /health-risk-summary
 // GET /health-risk-ranking
 // GET /health-risk-deteriorating
-// GET /health-risk-history/{equipment_id}?months=3
+// GET /health-risk-trend/{equipment_id}?months=3
 //
 // ==========================================================
 
@@ -7879,7 +7883,7 @@ async function loadEquipmentHealthTrend() {
 
         const response =
             await fetch(
-                `${API_URL}/health-risk-history/${encodeURIComponent(
+                `${API_URL}/health-risk-trend/${encodeURIComponent(
                     equipmentId
                 )}?months=3`
             );
