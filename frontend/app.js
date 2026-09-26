@@ -7818,16 +7818,19 @@ function ensureHealthTrendResultContainer() {
 // LOAD SELECTED EQUIPMENT HEALTH TREND
 // ==========================================================
 
-async function loadEquipmentHealthTrend() {
+async function loadEquipmentHealthTrend(
+    selectorId = "equipment-health-select",
+    resultId = "health-trend-result"
+) {
 
     const selector =
         document.getElementById(
-            "equipment-health-select"
+            selectorId
         );
 
 
     const result =
-        ensureHealthTrendResultContainer();
+    document.getElementById(resultId);
 
 
     if (!selector || !result) {
@@ -8656,3 +8659,12 @@ document.addEventListener(
 // END
 // FuElectric-AI v3.5.3 + v3.5.4
 // ==========================================================
+
+function loadHealthRiskTrend() {
+
+    return loadEquipmentHealthTrend(
+        "health-risk-equipment-select",
+        "equipment-health-trend"
+    );
+
+}
